@@ -42,19 +42,14 @@ package axi4_types_pkg;
         CACHE_WT_RA       = 4'b0010,  // Write-through, Read-allocate
         CACHE_WT_RWA      = 4'b0011,  // Write-through, Read/Write-allocate
         CACHE_WB_RA       = 4'b0110,  // Write-back, Read-allocate
-        CACHE_WB_RWA      = 4'b0111,  // Write-back, Read/Write-allocate
-        CACHE_DEVICE      = 4'b0000,
-        CACHE_NORMAL_NC   = 4'b0001,
-        CACHE_CACHEABLE   = 4'b0010
+        CACHE_WB_RWA      = 4'b0111   // Write-back, Read/Write-allocate
     } axi4_cache_e;
 
     // AXI4 Protection Type
     typedef enum logic [2:0] {
         PROT_NORMAL      = 3'b000,
         PROT_PRIVILEGED  = 3'b001,
-        PROT_SECURE      = 3'b000,
         PROT_NONSECURE   = 3'b010,
-        PROT_DATA        = 3'b000,
         PROT_INSTRUCTION = 3'b100
     } axi4_prot_e;
 

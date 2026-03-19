@@ -109,8 +109,8 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     endtask
 
     task drive_aw_channel(axi4_transaction txn);
-        m_vif.master_cb.awaddr   <= txn.m_addr[m_cfg.m_addr_width-1:0];
-        m_vif.master_cb.awid     <= txn.m_id[m_cfg.m_id_width-1:0];
+        m_vif.master_cb.awaddr   <= txn.m_addr[31:0];
+        m_vif.master_cb.awid     <= txn.m_id[3:0];
         m_vif.master_cb.awlen    <= txn.m_len;
         m_vif.master_cb.awsize   <= txn.m_size;
         m_vif.master_cb.awburst  <= txn.m_burst;
@@ -145,7 +145,7 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
 
     task drive_b_channel(axi4_transaction txn);
         // Wait for B response
-        while (!(m_vif.master_cb.bvalid && m_vif.master_cb.bready)) @(m_vif.master_cb);
+        while (!(m_vif.master_cb.bvalid && m_vif.bready)) @(m_vif.master_cb);
         txn.m_bresp = m_vif.master_cb.bresp;
         if (m_wr_pending.exists(txn.m_id))
             m_wr_pending.delete(txn.m_id);
@@ -170,8 +170,8 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     endtask
 
     task drive_ar_channel(axi4_transaction txn);
-        m_vif.master_cb.araddr   <= txn.m_addr[m_cfg.m_addr_width-1:0];
-        m_vif.master_cb.arid     <= txn.m_id[m_cfg.m_id_width-1:0];
+        m_vif.master_cb.araddr   <= txn.m_addr[31:0];
+        m_vif.master_cb.arid     <= txn.m_id[3:0];
         m_vif.master_cb.arlen    <= txn.m_len;
         m_vif.master_cb.arsize   <= txn.m_size;
         m_vif.master_cb.arburst  <= txn.m_burst;
@@ -194,7 +194,7 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
         txn.m_rdata = new[num_beats];
         txn.m_rresp = new[num_beats];
         for (int i = 0; i < num_beats; i++) begin
-            while (!(m_vif.master_cb.rvalid && m_vif.master_cb.rready)) @(m_vif.master_cb);
+            while (!(m_vif.master_cb.rvalid && m_vif.rready)) @(m_vif.master_cb);
             txn.m_rdata[i] = m_vif.master_cb.rdata;
             txn.m_rresp[i] = m_vif.master_cb.rresp;
             if (m_vif.master_cb.rlast) begin

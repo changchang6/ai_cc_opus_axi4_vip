@@ -250,20 +250,7 @@ class axi4_monitor extends uvm_monitor;
         avg_rd_lat = (m_rd_lat_count > 0) ? real'(m_rd_lat_sum) / real'(m_rd_lat_count) : 0.0;
 
         `uvm_info("AXI4_MON", $sformatf(
-            "\n========== AXI4 Monitor Statistics ==========\n" ,
-            "  Bandwidth Utilization : %.2f%%\n"               ,
-            "    Total valid bytes   : %0d\n"                   ,
-            "    Total cycles        : %0d\n"                   ,
-            "    Data width (bytes)  : %0d\n"                   ,
-            "  Write Latency:\n"                                ,
-            "    Max  : %0d cycles (awid=0x%0h)\n"             ,
-            "    Avg  : %.2f cycles\n"                          ,
-            "    Count: %0d\n"                                  ,
-            "  Read Latency:\n"                                 ,
-            "    Max  : %0d cycles (arid=0x%0h)\n"             ,
-            "    Avg  : %.2f cycles\n"                          ,
-            "    Count: %0d\n"                                  ,
-            "=============================================="),
+            "\n========== AXI4 Monitor Statistics ==========\n  Bandwidth Utilization : %.2f%%\n    Total valid bytes   : %0d\n    Total cycles        : %0d\n    Data width (bytes)  : %0d\n  Write Latency:\n    Max  : %0d cycles (awid=0x%0h)\n    Avg  : %.2f cycles\n    Count: %0d\n  Read Latency:\n    Max  : %0d cycles (arid=0x%0h)\n    Avg  : %.2f cycles\n    Count: %0d\n==============================================",
             utilization,
             m_total_valid_bytes,
             m_total_cycles,
@@ -273,7 +260,7 @@ class axi4_monitor extends uvm_monitor;
             m_wr_lat_count,
             m_rd_lat_max, m_rd_lat_max_id,
             avg_rd_lat,
-            m_rd_lat_count,
+            m_rd_lat_count),
             UVM_NONE)
     endfunction
 

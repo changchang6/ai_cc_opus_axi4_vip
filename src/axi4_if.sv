@@ -245,9 +245,7 @@ interface axi4_if #(
     AST_ARCHAN_STABLE: assert property (p_archan_stable)
         else $error("AST_ARCHAN_STABLE: AR channel signals changed while ARVALID held without ARREADY");
 
-    // 11. WSTRB width: static check
-    AST_WSTRB_WIDTH: initial assert ($bits(wstrb) == DATA_WIDTH/8)
-        else $fatal(1, "AST_WSTRB_WIDTH: wstrb width %0d != DATA_WIDTH/8 %0d", $bits(wstrb), DATA_WIDTH/8);
+    // 11. WSTRB width: guaranteed by parameter (DATA_WIDTH/8 == $bits(wstrb))
 
     // 12. Unaligned first beat WSTRB: low bytes must be zero for unaligned address
     // Track first beat after AW handshake

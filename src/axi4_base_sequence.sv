@@ -14,10 +14,8 @@ class axi4_base_sequence extends uvm_sequence #(axi4_transaction);
     endfunction
 
     task pre_start();
-        if (starting_phase != null) begin
+        if (starting_phase != null)
             starting_phase.raise_objection(this);
-            starting_phase.set_propagate_mode(0);
-        end
     endtask
 
     task post_start();
@@ -139,14 +137,15 @@ class axi4_wrap_seq extends axi4_base_sequence;
 
     task body();
         axi4_transaction txn;
+        byte unsigned wrap_lens[4] = '{8'd1, 8'd3, 8'd7, 8'd15};
         // Test all valid WRAP lengths: 2, 4, 8, 16 beats
-        foreach ({8'd1, 8'd3, 8'd7, 8'd15}[i]) begin
+        foreach (wrap_lens[i]) begin
             txn = axi4_transaction::type_id::create($sformatf("wrap_txn_%0d", i));
             start_item(txn);
             if (!txn.randomize() with {
                 m_trans_type == TRANS_WRITE;
                 m_burst      == BURST_WRAP;
-                m_len        == {8'd1, 8'd3, 8'd7, 8'd15}[i];
+                m_len        == wrap_lens[i];
                 m_size       == 3'd2;
                 // Aligned address for WRAP
                 m_addr[1:0]  == 2'b00;

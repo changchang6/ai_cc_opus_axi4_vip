@@ -117,8 +117,8 @@ class axi4_transaction extends uvm_sequence_item;
                 $sformatf("%s_sub%0d", get_name(), sub_idx));
             sub.m_trans_type    = m_trans_type;
             sub.m_addr          = {m_addr[63:32], cur_addr};
-            sub.m_id            = m_id + logic'(sub_idx);
-            sub.m_len           = logic [7:0]'(sub_beats - 1);
+            sub.m_id            = m_id + sub_idx;
+            sub.m_len           = 8'(sub_beats - 1);
             sub.m_size          = m_size;
             sub.m_burst         = BURST_INCR;
             sub.m_lock          = m_lock;
@@ -159,8 +159,8 @@ class axi4_transaction extends uvm_sequence_item;
 
         if (byte_offset == 0) return;
 
-        full_mask      = (beat_size >= 4) ? 4'hF : logic [3:0]'((1 << beat_size) - 1);
-        m_wstrb[0]     = full_mask & ~logic [3:0]'((1 << byte_offset) - 1);
+        full_mask      = (beat_size >= 4) ? 4'hF : 4'((1 << beat_size) - 1);
+        m_wstrb[0]     = full_mask & ~4'((1 << byte_offset) - 1);
     endfunction
 
     //-------------------------------------------------------------------------
