@@ -12,8 +12,10 @@ class axi4_config extends uvm_object;
     int unsigned m_id_width          = 4;
 
     // Flow control
-    int unsigned m_max_outstanding   = 8;
-    int unsigned m_send_interval     = 0;
+    int unsigned m_max_outstanding        = 8;  // legacy: sets both read and write
+    int unsigned m_max_read_outstanding   = 8;  // max pending read transactions
+    int unsigned m_max_write_outstanding  = 8;  // max pending write transactions
+    int unsigned m_send_interval          = 0;
 
     // Data-before-address
     bit          m_support_data_before_addr  = 0;

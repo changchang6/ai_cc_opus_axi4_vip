@@ -9,6 +9,8 @@ package axi4_pkg;
     import axi4_types_pkg::*;
 
     `include "axi4_config.sv"
+    `include "axi4_system_cfg.sv"
+    `include "axi4_env_cfg.sv"
     `include "axi4_transaction.sv"
     `include "axi4_sequencer.sv"
     `include "axi4_master_driver.sv"
