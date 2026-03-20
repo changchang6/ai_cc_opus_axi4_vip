@@ -18,6 +18,7 @@ package axi4_pkg;
     `include "axi4_master_agent.sv"
     `include "axi4_env.sv"
     `include "axi4_base_sequence.sv"
+    `include "seq_lib.sv"
     `include "axi4_base_test.sv"
 
 endpackage : axi4_pkg
