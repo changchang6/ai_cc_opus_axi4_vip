@@ -88,29 +88,29 @@ class axi4_monitor extends uvm_monitor;
     task observe_aw_channel();
         forever begin
             @(m_vif.monitor_cb);
-            if (m_vif.monitor_cb.awvalid && m_vif.monitor_cb.awready) begin
+            if (m_vif.monitor_cb.awvalid_m && m_vif.monitor_cb.awready_m) begin
                 axi4_transaction txn;
                 txn = axi4_transaction::type_id::create("mon_wr_txn");
                 txn.m_trans_type    = TRANS_WRITE;
-                txn.m_addr          = {32'h0, m_vif.monitor_cb.awaddr};
-                txn.m_id            = {4'h0, m_vif.monitor_cb.awid};
-                txn.m_len           = m_vif.monitor_cb.awlen;
-                txn.m_size          = m_vif.monitor_cb.awsize;
-                txn.m_burst         = axi4_burst_e'(m_vif.monitor_cb.awburst);
-                txn.m_lock          = m_vif.monitor_cb.awlock;
-                txn.m_cache         = m_vif.monitor_cb.awcache;
-                txn.m_prot          = m_vif.monitor_cb.awprot;
-                txn.m_qos           = m_vif.monitor_cb.awqos;
-                txn.m_region        = m_vif.monitor_cb.awregion;
+                txn.m_addr          = {32'h0, m_vif.monitor_cb.awaddr_m};
+                txn.m_id            = {4'h0, m_vif.monitor_cb.awid_m};
+                txn.m_len           = m_vif.monitor_cb.awlen_m;
+                txn.m_size          = m_vif.monitor_cb.awsize_m;
+                txn.m_burst         = axi4_burst_e'(m_vif.monitor_cb.awburst_m);
+                txn.m_lock          = m_vif.monitor_cb.awlock_m;
+                txn.m_cache         = m_vif.monitor_cb.awcache_m;
+                txn.m_prot          = m_vif.monitor_cb.awprot_m;
+                txn.m_qos           = m_vif.monitor_cb.awqos_m;
+                txn.m_region        = m_vif.monitor_cb.awregion_m;
                 txn.m_aw_accept_time = m_cycle;
-                txn.m_data  = new[int'(m_vif.monitor_cb.awlen) + 1];
-                txn.m_wstrb = new[int'(m_vif.monitor_cb.awlen) + 1];
-                m_wr_inflight[m_vif.monitor_cb.awid] = txn;
+                txn.m_data  = new[int'(m_vif.monitor_cb.awlen_m) + 1];
+                txn.m_wstrb = new[int'(m_vif.monitor_cb.awlen_m) + 1];
+                m_wr_inflight[m_vif.monitor_cb.awid_m] = txn;
 
                 // Timeout check
                 if (m_cfg.m_wtimeout > 0)
                     fork
-                        automatic logic [7:0] tid = m_vif.monitor_cb.awid;
+                        automatic logic [7:0] tid = m_vif.monitor_cb.awid_m;
                         automatic longint unsigned tstart = m_cycle;
                         begin
                             repeat (m_cfg.m_wtimeout) @(m_vif.monitor_cb);
@@ -130,9 +130,9 @@ class axi4_monitor extends uvm_monitor;
         // Track which AW we're filling (simple: use first inflight)
         forever begin
             @(m_vif.monitor_cb);
-            if (m_vif.monitor_cb.wvalid && m_vif.monitor_cb.wready) begin
+            if (m_vif.monitor_cb.wvalid_m && m_vif.monitor_cb.wready_m) begin
                 // Accumulate bandwidth
-                m_total_valid_bytes += $countones(m_vif.monitor_cb.wstrb);
+                m_total_valid_bytes += $countones(m_vif.monitor_cb.wstrb_m);
             end
         end
     endtask
@@ -143,14 +143,14 @@ class axi4_monitor extends uvm_monitor;
     task observe_b_channel();
         forever begin
             @(m_vif.monitor_cb);
-            if (m_vif.monitor_cb.bvalid && m_vif.monitor_cb.bready) begin
+            if (m_vif.monitor_cb.bvalid_m && m_vif.monitor_cb.bready_m) begin
                 logic [7:0] bid_val;
-                bid_val = {4'h0, m_vif.monitor_cb.bid};
+                bid_val = {4'h0, m_vif.monitor_cb.bid_m};
                 if (m_wr_inflight.exists(bid_val)) begin
                     axi4_transaction txn;
                     longint unsigned lat;
                     txn = m_wr_inflight[bid_val];
-                    txn.m_bresp = m_vif.monitor_cb.bresp;
+                    txn.m_bresp = m_vif.monitor_cb.bresp_m;
                     // Latency: aw_accept to wlast (approximated as current cycle)
                     lat = m_cycle - txn.m_aw_accept_time;
                     m_wr_lat_sum += lat;
@@ -172,24 +172,24 @@ class axi4_monitor extends uvm_monitor;
     task observe_ar_channel();
         forever begin
             @(m_vif.monitor_cb);
-            if (m_vif.monitor_cb.arvalid && m_vif.monitor_cb.arready) begin
+            if (m_vif.monitor_cb.arvalid_m && m_vif.monitor_cb.arready_m) begin
                 axi4_transaction txn;
                 txn = axi4_transaction::type_id::create("mon_rd_txn");
                 txn.m_trans_type    = TRANS_READ;
-                txn.m_addr          = {32'h0, m_vif.monitor_cb.araddr};
-                txn.m_id            = {4'h0, m_vif.monitor_cb.arid};
-                txn.m_len           = m_vif.monitor_cb.arlen;
-                txn.m_size          = m_vif.monitor_cb.arsize;
-                txn.m_burst         = axi4_burst_e'(m_vif.monitor_cb.arburst);
+                txn.m_addr          = {32'h0, m_vif.monitor_cb.araddr_m};
+                txn.m_id            = {4'h0, m_vif.monitor_cb.arid_m};
+                txn.m_len           = m_vif.monitor_cb.arlen_m;
+                txn.m_size          = m_vif.monitor_cb.arsize_m;
+                txn.m_burst         = axi4_burst_e'(m_vif.monitor_cb.arburst_m);
                 txn.m_ar_accept_time = m_cycle;
-                txn.m_rdata = new[int'(m_vif.monitor_cb.arlen) + 1];
-                txn.m_rresp = new[int'(m_vif.monitor_cb.arlen) + 1];
-                m_rd_inflight[m_vif.monitor_cb.arid] = txn;
+                txn.m_rdata = new[int'(m_vif.monitor_cb.arlen_m) + 1];
+                txn.m_rresp = new[int'(m_vif.monitor_cb.arlen_m) + 1];
+                m_rd_inflight[m_vif.monitor_cb.arid_m] = txn;
 
                 // Timeout check
                 if (m_cfg.m_rtimeout > 0)
                     fork
-                        automatic logic [7:0] tid = m_vif.monitor_cb.arid;
+                        automatic logic [7:0] tid = m_vif.monitor_cb.arid_m;
                         automatic longint unsigned tstart = m_cycle;
                         begin
                             repeat (m_cfg.m_rtimeout) @(m_vif.monitor_cb);
@@ -208,10 +208,10 @@ class axi4_monitor extends uvm_monitor;
     task observe_r_channel();
         forever begin
             @(m_vif.monitor_cb);
-            if (m_vif.monitor_cb.rvalid && m_vif.monitor_cb.rready) begin
+            if (m_vif.monitor_cb.rvalid_m && m_vif.monitor_cb.rready_m) begin
                 logic [7:0] rid_val;
-                rid_val = {4'h0, m_vif.monitor_cb.rid};
-                if (m_vif.monitor_cb.rlast && m_rd_inflight.exists(rid_val)) begin
+                rid_val = {4'h0, m_vif.monitor_cb.rid_m};
+                if (m_vif.monitor_cb.rlast_m && m_rd_inflight.exists(rid_val)) begin
                     axi4_transaction txn;
                     longint unsigned lat;
                     txn = m_rd_inflight[rid_val];

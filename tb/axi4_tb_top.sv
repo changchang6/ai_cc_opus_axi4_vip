@@ -47,19 +47,19 @@ module axi4_tb_top;
     int                   s_w_beats_remaining;
 
     // AW channel: always ready
-    assign dut_if.awready = 1'b1;
+    assign dut_if.awready_m = 1'b1;
 
     // W channel: always ready
-    assign dut_if.wready = 1'b1;
+    assign dut_if.wready_m = 1'b1;
 
-    // B channel: respond after wlast
+    // B channel: respond after wlast_m
     logic                s_bvalid;
     logic [ID_WIDTH-1:0] s_bid;
     logic [1:0]          s_bresp;
 
-    assign dut_if.bvalid = s_bvalid;
-    assign dut_if.bid    = s_bid;
-    assign dut_if.bresp  = s_bresp;
+    assign dut_if.bvalid_m = s_bvalid;
+    assign dut_if.bid_m    = s_bid;
+    assign dut_if.bresp_m  = s_bresp;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -69,22 +69,22 @@ module axi4_tb_top;
             s_awid   <= '0;
         end else begin
             // Capture AW id
-            if (dut_if.awvalid && dut_if.awready)
-                s_awid <= dut_if.awid;
+            if (dut_if.awvalid_m && dut_if.awready_m)
+                s_awid <= dut_if.awid_m;
 
-            // Issue B after wlast
-            if (dut_if.wvalid && dut_if.wready && dut_if.wlast) begin
+            // Issue B after wlast_m
+            if (dut_if.wvalid_m && dut_if.wready_m && dut_if.wlast_m) begin
                 s_bvalid <= 1;
                 s_bid    <= s_awid;
                 s_bresp  <= 2'b00; // OKAY
-            end else if (s_bvalid && dut_if.bready) begin
+            end else if (s_bvalid && dut_if.bready_m) begin
                 s_bvalid <= 0;
             end
         end
     end
 
     // AR channel: always ready
-    assign dut_if.arready = 1'b1;
+    assign dut_if.arready_m = 1'b1;
 
     // R channel: respond with incrementing data
     logic                 s_rvalid;
@@ -96,11 +96,11 @@ module axi4_tb_top;
     logic [7:0]           s_r_beat_cnt;
     logic [ID_WIDTH-1:0]  s_arid_latch;
 
-    assign dut_if.rvalid = s_rvalid;
-    assign dut_if.rid    = s_rid;
-    assign dut_if.rdata  = s_rdata;
-    assign dut_if.rresp  = s_rresp;
-    assign dut_if.rlast  = s_rlast;
+    assign dut_if.rvalid_m = s_rvalid;
+    assign dut_if.rid_m    = s_rid;
+    assign dut_if.rdata_m  = s_rdata;
+    assign dut_if.rresp_m  = s_rresp;
+    assign dut_if.rlast_m  = s_rlast;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -113,17 +113,17 @@ module axi4_tb_top;
             s_r_beat_cnt    <= 0;
             s_arid_latch    <= '0;
         end else begin
-            if (dut_if.arvalid && dut_if.arready && !s_rvalid) begin
+            if (dut_if.arvalid_m && dut_if.arready_m && !s_rvalid) begin
                 // Start read response
-                s_arid_latch    <= dut_if.arid;
-                s_r_beats_total <= dut_if.arlen;
+                s_arid_latch    <= dut_if.arid_m;
+                s_r_beats_total <= dut_if.arlen_m;
                 s_r_beat_cnt    <= 0;
                 s_rvalid        <= 1;
-                s_rid           <= dut_if.arid;
+                s_rid           <= dut_if.arid_m;
                 s_rdata         <= 32'hDEAD_0000;
                 s_rresp         <= 2'b00;
-                s_rlast         <= (dut_if.arlen == 0);
-            end else if (s_rvalid && dut_if.rready) begin
+                s_rlast         <= (dut_if.arlen_m == 0);
+            end else if (s_rvalid && dut_if.rready_m) begin
                 if (s_rlast) begin
                     s_rvalid <= 0;
                     s_rlast  <= 0;
