@@ -20,6 +20,15 @@ class axi4_master_agent extends uvm_agent;
         if (!uvm_config_db #(axi4_config)::get(this, "", "m_cfg", m_cfg))
             `uvm_fatal("AXI4_AGT", "Cannot get axi4_config from config_db")
 
+        // If vif not populated through config object, try getting it directly
+        if (m_cfg.m_vif == null) begin
+            if (!uvm_config_db #(virtual axi4_if)::get(this, "", "vif", m_cfg.m_vif))
+                `uvm_fatal("AXI4_AGT", "Cannot get virtual interface from config_db")
+        end
+
+        // Re-publish config (with vif) for child components (driver, monitor)
+        uvm_config_db #(axi4_config)::set(this, "*", "m_cfg", m_cfg);
+
         m_monitor = axi4_monitor::type_id::create("m_monitor", this);
 
         if (m_cfg.m_is_active == UVM_ACTIVE) begin

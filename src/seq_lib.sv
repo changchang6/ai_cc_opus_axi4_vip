@@ -20,7 +20,7 @@ class axi4_fixed_len0_size7_seq extends axi4_base_sequence;
     `uvm_object_utils(axi4_fixed_len0_size7_seq)
 
     // Step 2: Configurable start address (128-byte aligned for size=7)
-    rand logic [31:0] m_start_addr;
+    rand bit [31:0] m_start_addr;
 
     // Step 2: Number of transactions to send (default 10)
     int unsigned m_num_txns = 10;

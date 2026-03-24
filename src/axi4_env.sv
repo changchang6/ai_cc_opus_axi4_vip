@@ -43,31 +43,43 @@ class axi4_env extends uvm_env;
 
     // Resolve configuration: prefer axi4_env_cfg; fall back to axi4_config.
     local function void _resolve_cfg();
-        axi4_config legacy_cfg;
+        axi4_config        legacy_cfg;
+        virtual axi4_system_if sys_vif;
 
-        if (uvm_config_db #(axi4_env_cfg)::get(this, "", "m_env_cfg", m_env_cfg))
-            return;  // found new-style env_cfg
+        if (!uvm_config_db #(axi4_env_cfg)::get(this, "", "m_env_cfg", m_env_cfg)) begin
+            // Fall back: build an env_cfg from a legacy axi4_config
+            m_env_cfg = axi4_env_cfg::type_id::create("m_env_cfg");
+            m_env_cfg.num_masters = 1;
 
-        // Fall back: build an env_cfg from a legacy axi4_config
-        m_env_cfg = axi4_env_cfg::type_id::create("m_env_cfg");
-        m_env_cfg.num_masters = 1;
-
-        if (uvm_config_db #(axi4_config)::get(this, "", "m_cfg", legacy_cfg)) begin
-            m_env_cfg.master_addr_width    [0] = legacy_cfg.m_addr_width;
-            m_env_cfg.master_data_width    [0] = legacy_cfg.m_data_width;
-            m_env_cfg.master_id_width      [0] = legacy_cfg.m_id_width;
-            m_env_cfg.max_read_outstanding [0] = legacy_cfg.m_max_read_outstanding;
-            m_env_cfg.max_write_outstanding[0] = legacy_cfg.m_max_write_outstanding;
-            m_env_cfg.u_axi_system_cfg.awready_watchdog_timeout =
-                legacy_cfg.m_wtimeout;
-            m_env_cfg.u_axi_system_cfg.arready_watchdog_timeout =
-                legacy_cfg.m_rtimeout;
-            m_env_cfg.m_vif    = new[1];
-            m_env_cfg.m_vif[0] = legacy_cfg.m_vif;
-        end else begin
-            `uvm_warning("AXI4_ENV",
-                "Neither axi4_env_cfg nor axi4_config found in config_db. Using defaults.")
+            if (uvm_config_db #(axi4_config)::get(this, "", "m_cfg", legacy_cfg)) begin
+                m_env_cfg.master_addr_width    [0] = legacy_cfg.m_addr_width;
+                m_env_cfg.master_data_width    [0] = legacy_cfg.m_data_width;
+                m_env_cfg.master_id_width      [0] = legacy_cfg.m_id_width;
+                m_env_cfg.max_read_outstanding [0] = legacy_cfg.m_max_read_outstanding;
+                m_env_cfg.max_write_outstanding[0] = legacy_cfg.m_max_write_outstanding;
+                m_env_cfg.u_axi_system_cfg.awready_watchdog_timeout =
+                    legacy_cfg.m_wtimeout;
+                m_env_cfg.u_axi_system_cfg.arready_watchdog_timeout =
+                    legacy_cfg.m_rtimeout;
+                m_env_cfg.m_vif    = new[1];
+                m_env_cfg.m_vif[0] = legacy_cfg.m_vif;
+            end else begin
+                `uvm_warning("AXI4_ENV",
+                    "Neither axi4_env_cfg nor axi4_config found in config_db. Using defaults.")
+            end
         end
+
+        // If m_vif not yet populated, try resolving from axi4_system_if.
+        // Access master_vif[] (virtual axi4_if array) instead of master_if[]
+        // (nested interface instance) to allow variable indexing.
+        if (m_env_cfg.m_vif.size() < m_env_cfg.num_masters) begin
+            if (uvm_config_db #(virtual axi4_system_if)::get(this, "*", "vif", sys_vif)) begin
+                m_env_cfg.m_vif = new[m_env_cfg.num_masters];
+                for (int i = 0; i < m_env_cfg.num_masters; i++)
+                    m_env_cfg.m_vif[i] = sys_vif.master_vif[i];
+            end
+        end
+
         m_env_cfg.set_axi_system_cfg();
     endfunction
 

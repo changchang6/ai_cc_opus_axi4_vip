@@ -37,4 +37,18 @@ interface axi4_system_if #(
         .rst_n(rst_n)
     );
 
+    // Virtual interface handles accessible through a virtual axi4_system_if
+    // handle with variable indices. Nested interface instances (master_if[])
+    // cannot be accessed via virtual handles in most tools, so we expose
+    // plain virtual axi4_if handles here and populate them at time-zero.
+    // Variable indices into master_if[] are legal inside the interface body.
+    virtual axi4_if master_vif[NUM_MASTERS];
+
+    genvar g;
+    generate
+        for (g = 0; g < NUM_MASTERS; g++) begin
+            initial master_vif[g] = master_if[g];
+        end
+    endgenerate
+
 endinterface : axi4_system_if

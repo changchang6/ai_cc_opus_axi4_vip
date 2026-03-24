@@ -10,6 +10,7 @@ UVM_ARGS   = +incdir+$(UVM_HOME)/src $(UVM_HOME)/src/uvm_pkg.sv
 # Source files (order matters)
 SRC_FILES  = src/axi4_types.sv \
              src/axi4_if.sv \
+             src/axi4_system_if.sv \
              src/axi4_pkg.sv \
              tb/axi4_tb_top.sv
 

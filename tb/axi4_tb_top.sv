@@ -38,6 +38,10 @@ module axi4_tb_top;
     //-------------------------------------------------------------------------
     axi4_if #(DATA_WIDTH, ADDR_WIDTH, ID_WIDTH) dut_if (clk, rst_n);
 
+    axi4_system_if #(.NUM_MASTERS(1), .DATA_WIDTH(DATA_WIDTH),
+                     .ADDR_WIDTH(ADDR_WIDTH), .ID_WIDTH(ID_WIDTH))
+        sys_if (.clk(clk), .rst_n(rst_n));
+
     //-------------------------------------------------------------------------
     // Simple Slave Model
     //-------------------------------------------------------------------------
