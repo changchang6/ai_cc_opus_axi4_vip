@@ -113,7 +113,8 @@ interface axi4_if #(
         end else begin
             if (awvalid && awready) begin
                 aw_len_latch <= awlen;
-                aw_beat_cnt  <= 0;
+                // If W beat 0 arrives simultaneously with AW handshake, count it now
+                aw_beat_cnt  <= (wvalid && wready) ? 1 : 0;
             end else if (wvalid && wready) begin
                 aw_beat_cnt <= aw_beat_cnt + 1;
             end
@@ -127,7 +128,8 @@ interface axi4_if #(
         end else begin
             if (arvalid && arready) begin
                 ar_len_latch <= arlen;
-                ar_beat_cnt  <= 0;
+                // If R beat 0 arrives simultaneously with AR handshake, count it now
+                ar_beat_cnt  <= (rvalid && rready) ? 1 : 0;
             end else if (rvalid && rready) begin
                 ar_beat_cnt <= ar_beat_cnt + 1;
             end
@@ -163,19 +165,25 @@ interface axi4_if #(
         else $error("AST_WVALID_STABLE: WVALID deasserted before WREADY");
 
     // 4. WLAST correct: wlast must be high only on beat awlen+1
+    // When AW and W beat 0 are simultaneous, use awlen directly (registered counter not yet updated)
     property p_wlast_correct;
         @(posedge clk) disable iff (!rst_n)
         (wvalid && wready) |->
-            (wlast == (aw_beat_cnt == aw_len_latch));
+            (awvalid && awready) ?
+                (wlast == (awlen == 8'd0)) :
+                (wlast == (aw_beat_cnt == aw_len_latch));
     endproperty
     AST_WLAST_CORRECT: assert property (p_wlast_correct)
         else $error("AST_WLAST_CORRECT: WLAST incorrect at beat %0d (expected beat %0d)", aw_beat_cnt, aw_len_latch);
 
     // 5. RLAST correct: rlast must be high only on beat arlen+1
+    // When AR and R beat 0 are simultaneous, use arlen directly (registered counter not yet updated)
     property p_rlast_correct;
         @(posedge clk) disable iff (!rst_n)
         (rvalid && rready) |->
-            (rlast == (ar_beat_cnt == ar_len_latch));
+            (arvalid && arready) ?
+                (rlast == (arlen == 8'd0)) :
+                (rlast == (ar_beat_cnt == ar_len_latch));
     endproperty
     AST_RLAST_CORRECT: assert property (p_rlast_correct)
         else $error("AST_RLAST_CORRECT: RLAST incorrect at beat %0d (expected beat %0d)", ar_beat_cnt, ar_len_latch);
@@ -246,6 +254,50 @@ interface axi4_if #(
         else $error("AST_ARCHAN_STABLE: AR channel signals changed while ARVALID held without ARREADY");
 
     // 11. WSTRB width: guaranteed by parameter (DATA_WIDTH/8 == $bits(wstrb))
+
+    // 13. X-value checks: key fields must not contain X/Z while valid is asserted
+    property p_no_x_aw;
+        @(posedge clk) disable iff (!rst_n)
+        awvalid |-> (!$isunknown(awaddr) && !$isunknown(awid) &&
+                     !$isunknown(awlen)  && !$isunknown(awsize) && !$isunknown(awburst));
+    endproperty
+    AST_NO_X_AW: assert property (p_no_x_aw)
+        else $error("AST_NO_X_AW: X/Z detected on AW channel while AWVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
+                    awaddr, awid, awlen, awsize, awburst);
+
+    property p_no_x_w;
+        @(posedge clk) disable iff (!rst_n)
+        wvalid |-> (!$isunknown(wdata) && !$isunknown(wstrb) && !$isunknown(wlast));
+    endproperty
+    AST_NO_X_W: assert property (p_no_x_w)
+        else $error("AST_NO_X_W: X/Z detected on W channel while WVALID (data=%0h strb=%0h last=%0h)",
+                    wdata, wstrb, wlast);
+
+    property p_no_x_ar;
+        @(posedge clk) disable iff (!rst_n)
+        arvalid |-> (!$isunknown(araddr) && !$isunknown(arid) &&
+                     !$isunknown(arlen)  && !$isunknown(arsize) && !$isunknown(arburst));
+    endproperty
+    AST_NO_X_AR: assert property (p_no_x_ar)
+        else $error("AST_NO_X_AR: X/Z detected on AR channel while ARVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
+                    araddr, arid, arlen, arsize, arburst);
+
+    property p_no_x_b;
+        @(posedge clk) disable iff (!rst_n)
+        bvalid |-> (!$isunknown(bid) && !$isunknown(bresp));
+    endproperty
+    AST_NO_X_B: assert property (p_no_x_b)
+        else $error("AST_NO_X_B: X/Z detected on B channel while BVALID (bid=%0h bresp=%0h)",
+                    bid, bresp);
+
+    property p_no_x_r;
+        @(posedge clk) disable iff (!rst_n)
+        rvalid |-> (!$isunknown(rid) && !$isunknown(rdata) &&
+                    !$isunknown(rresp) && !$isunknown(rlast));
+    endproperty
+    AST_NO_X_R: assert property (p_no_x_r)
+        else $error("AST_NO_X_R: X/Z detected on R channel while RVALID (rid=%0h rdata=%0h rresp=%0h rlast=%0h)",
+                    rid, rdata, rresp, rlast);
 
     // 12. Unaligned first beat WSTRB: low bytes must be zero for unaligned address
     // Track first beat after AW handshake

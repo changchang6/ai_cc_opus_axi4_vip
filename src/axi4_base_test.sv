@@ -14,7 +14,7 @@ class axi4_base_test extends uvm_test;
     endfunction
 
     function void build_phase(uvm_phase phase);
-        virtual axi4_if vif;
+        virtual axi4_system_if sys_vif;
         super.build_phase(phase);
 
         // --- Create and configure env_cfg ---
@@ -42,10 +42,11 @@ class axi4_base_test extends uvm_test;
         m_env_cfg.max_write_outstanding[0] = 8;
 
         // Virtual interface (provided by tb_top via config_db)
-        if (!uvm_config_db #(virtual axi4_if)::get(this, "", "m_vif", vif))
-            `uvm_fatal("AXI4_TEST", "Cannot get virtual interface from config_db")
-        m_env_cfg.m_vif    = new[1];
-        m_env_cfg.m_vif[0] = vif;
+        if (!uvm_config_db #(virtual axi4_system_if)::get(this, "", "vif", sys_vif))
+            `uvm_fatal("AXI4_TEST", "Cannot get virtual system interface from config_db")
+        m_env_cfg.m_vif = new[m_env_cfg.num_masters];
+        for (int i = 0; i < m_env_cfg.num_masters; i++)
+            m_env_cfg.m_vif[i] = sys_vif.master_vif[i];
 
         // Finalise: build internal per-master axi4_config objects
         m_env_cfg.set_axi_system_cfg();

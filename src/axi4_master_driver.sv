@@ -39,32 +39,21 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
         @(m_vif.master_cb);
 
         fork
-            drive_write_channel();
-            drive_read_channel();
+            dispatch_transactions();
             count_cycles();
             monitor_timeout();
         join
     endtask
 
-    //-------------------------------------------------------------------------
-    // Cycle counter
-    //-------------------------------------------------------------------------
-    task count_cycles();
-        forever begin
-            @(m_vif.master_cb);
-            m_cycle++;
-        end
-    endtask
-
-    //-------------------------------------------------------------------------
-    // Write channel: AW + W + B
-    //-------------------------------------------------------------------------
-    task drive_write_channel();
+    // Single dispatch loop: only one get_next_item() call, then route by type.
+    // Having two parallel tasks each calling get_next_item() causes both to
+    // peek the same item; whichever calls item_done() first consumes it, and
+    // the second item_done() silently drops the next transaction.
+    task dispatch_transactions();
         axi4_transaction txn;
         forever begin
             seq_item_port.get_next_item(txn);
             if (txn.m_trans_type == TRANS_WRITE) begin
-                // Check if split needed
                 if (txn.m_burst == BURST_INCR &&
                     (txn.m_len > 8'd15 ||
                      crosses_2kb_boundary(txn.m_addr[31:0], txn.m_len, txn.m_size))) begin
@@ -77,10 +66,23 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
                     wait_for_outstanding_slot();
                     drive_single_write(txn);
                 end
-                // Send interval
+                repeat (m_cfg.m_send_interval) @(m_vif.master_cb);
+            end else if (txn.m_trans_type == TRANS_READ) begin
+                drive_ar_channel(txn);
+                drive_r_channel(txn);
                 repeat (m_cfg.m_send_interval) @(m_vif.master_cb);
             end
             seq_item_port.item_done();
+        end
+    endtask
+
+    //-------------------------------------------------------------------------
+    // Cycle counter
+    //-------------------------------------------------------------------------
+    task count_cycles();
+        forever begin
+            @(m_vif.master_cb);
+            m_cycle++;
         end
     endtask
 
@@ -156,19 +158,6 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     //-------------------------------------------------------------------------
     // Read channel: AR + R
     //-------------------------------------------------------------------------
-    task drive_read_channel();
-        axi4_transaction txn;
-        forever begin
-            seq_item_port.get_next_item(txn);
-            if (txn.m_trans_type == TRANS_READ) begin
-                drive_ar_channel(txn);
-                drive_r_channel(txn);
-                repeat (m_cfg.m_send_interval) @(m_vif.master_cb);
-            end
-            seq_item_port.item_done();
-        end
-    endtask
-
     task drive_ar_channel(axi4_transaction txn);
         m_vif.master_cb.araddr   <= txn.m_addr[31:0];
         m_vif.master_cb.arid     <= txn.m_id[3:0];

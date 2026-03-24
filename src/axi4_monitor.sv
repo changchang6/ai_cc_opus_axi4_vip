@@ -83,6 +83,55 @@ class axi4_monitor extends uvm_monitor;
     endtask
 
     //-------------------------------------------------------------------------
+    // X-value checkers: called on handshake, report any X/Z via uvm_error
+    //-------------------------------------------------------------------------
+    function void check_x_aw();
+        if ($isunknown(m_vif.monitor_cb.awaddr) || $isunknown(m_vif.monitor_cb.awid)   ||
+            $isunknown(m_vif.monitor_cb.awlen)  || $isunknown(m_vif.monitor_cb.awsize) ||
+            $isunknown(m_vif.monitor_cb.awburst))
+            `uvm_error("AXI4_MON_X",
+                $sformatf("X/Z on AW channel at handshake: awaddr=%0h awid=%0h awlen=%0h awsize=%0h awburst=%0h",
+                    m_vif.monitor_cb.awaddr, m_vif.monitor_cb.awid,
+                    m_vif.monitor_cb.awlen,  m_vif.monitor_cb.awsize,
+                    m_vif.monitor_cb.awburst))
+    endfunction
+
+    function void check_x_w();
+        if ($isunknown(m_vif.monitor_cb.wdata) || $isunknown(m_vif.monitor_cb.wstrb) ||
+            $isunknown(m_vif.monitor_cb.wlast))
+            `uvm_error("AXI4_MON_X",
+                $sformatf("X/Z on W channel at handshake: wdata=%0h wstrb=%0h wlast=%0h",
+                    m_vif.monitor_cb.wdata, m_vif.monitor_cb.wstrb, m_vif.monitor_cb.wlast))
+    endfunction
+
+    function void check_x_ar();
+        if ($isunknown(m_vif.monitor_cb.araddr) || $isunknown(m_vif.monitor_cb.arid)   ||
+            $isunknown(m_vif.monitor_cb.arlen)  || $isunknown(m_vif.monitor_cb.arsize) ||
+            $isunknown(m_vif.monitor_cb.arburst))
+            `uvm_error("AXI4_MON_X",
+                $sformatf("X/Z on AR channel at handshake: araddr=%0h arid=%0h arlen=%0h arsize=%0h arburst=%0h",
+                    m_vif.monitor_cb.araddr, m_vif.monitor_cb.arid,
+                    m_vif.monitor_cb.arlen,  m_vif.monitor_cb.arsize,
+                    m_vif.monitor_cb.arburst))
+    endfunction
+
+    function void check_x_b();
+        if ($isunknown(m_vif.monitor_cb.bid) || $isunknown(m_vif.monitor_cb.bresp))
+            `uvm_error("AXI4_MON_X",
+                $sformatf("X/Z on B channel at handshake: bid=%0h bresp=%0h",
+                    m_vif.monitor_cb.bid, m_vif.monitor_cb.bresp))
+    endfunction
+
+    function void check_x_r();
+        if ($isunknown(m_vif.monitor_cb.rid)   || $isunknown(m_vif.monitor_cb.rdata) ||
+            $isunknown(m_vif.monitor_cb.rresp) || $isunknown(m_vif.monitor_cb.rlast))
+            `uvm_error("AXI4_MON_X",
+                $sformatf("X/Z on R channel at handshake: rid=%0h rdata=%0h rresp=%0h rlast=%0h",
+                    m_vif.monitor_cb.rid, m_vif.monitor_cb.rdata,
+                    m_vif.monitor_cb.rresp, m_vif.monitor_cb.rlast))
+    endfunction
+
+    //-------------------------------------------------------------------------
     // Observe AW channel
     //-------------------------------------------------------------------------
     task observe_aw_channel();
@@ -90,6 +139,7 @@ class axi4_monitor extends uvm_monitor;
             @(m_vif.monitor_cb);
             if (m_vif.monitor_cb.awvalid && m_vif.monitor_cb.awready) begin
                 axi4_transaction txn;
+                check_x_aw();
                 txn = axi4_transaction::type_id::create("mon_wr_txn");
                 txn.m_trans_type    = TRANS_WRITE;
                 txn.m_addr          = {32'h0, m_vif.monitor_cb.awaddr};
@@ -132,6 +182,7 @@ class axi4_monitor extends uvm_monitor;
             @(m_vif.monitor_cb);
             if (m_vif.monitor_cb.wvalid && m_vif.monitor_cb.wready) begin
                 // Accumulate bandwidth
+                check_x_w();
                 m_total_valid_bytes += $countones(m_vif.monitor_cb.wstrb);
             end
         end
@@ -145,6 +196,7 @@ class axi4_monitor extends uvm_monitor;
             @(m_vif.monitor_cb);
             if (m_vif.monitor_cb.bvalid && m_vif.monitor_cb.bready) begin
                 logic [7:0] bid_val;
+                check_x_b();
                 bid_val = {4'h0, m_vif.monitor_cb.bid};
                 if (m_wr_inflight.exists(bid_val)) begin
                     axi4_transaction txn;
@@ -174,6 +226,7 @@ class axi4_monitor extends uvm_monitor;
             @(m_vif.monitor_cb);
             if (m_vif.monitor_cb.arvalid && m_vif.monitor_cb.arready) begin
                 axi4_transaction txn;
+                check_x_ar();
                 txn = axi4_transaction::type_id::create("mon_rd_txn");
                 txn.m_trans_type    = TRANS_READ;
                 txn.m_addr          = {32'h0, m_vif.monitor_cb.araddr};
@@ -210,6 +263,7 @@ class axi4_monitor extends uvm_monitor;
             @(m_vif.monitor_cb);
             if (m_vif.monitor_cb.rvalid && m_vif.monitor_cb.rready) begin
                 logic [7:0] rid_val;
+                check_x_r();
                 rid_val = {4'h0, m_vif.monitor_cb.rid};
                 if (m_vif.monitor_cb.rlast && m_rd_inflight.exists(rid_val)) begin
                     axi4_transaction txn;
