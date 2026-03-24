@@ -7,7 +7,7 @@ class axi4_monitor extends uvm_monitor;
     `uvm_component_utils(axi4_monitor)
 
     axi4_config                         m_cfg;
-    virtual axi4_if                     m_vif;
+    axi4_vif_t                          m_vif;
     uvm_analysis_port #(axi4_transaction) m_ap;
 
     // In-flight write transactions: awid -> transaction

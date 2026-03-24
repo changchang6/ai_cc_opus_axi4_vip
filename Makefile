@@ -23,10 +23,14 @@ VCS_FLAGS  = -full64 -sverilog -timescale=1ns/1ps \
              -LDFLAGS -Wl,--no-as-needed
 
 # Simulation flags
-SIM_FLAGS  = +UVM_TESTNAME=axi4_base_test \
-             +UVM_VERBOSITY=UVM_MEDIUM
+#TESTNAME  ?= axi4_base_test
+TESTNAME  ?= axi4_fixed_len0_size7_test
 
-# Waveform dumping: make sim WAVE=1  (output: sim.fsdb)
+SIM_FLAGS  = +UVM_TESTNAME=$(TESTNAME) \
+             +UVM_VERBOSITY=UVM_MEDIUM \
+             +FSDB_FILE=$(TESTNAME)
+
+# Waveform dumping: make sim WAVE=1  (output: <TESTNAME>.fsdb)
 WAVE      ?= 1
 WAVE_FLAGS =
 ifeq ($(WAVE),1)
@@ -35,19 +39,31 @@ endif
 
 TOP        = axi4_tb_top
 SIMV       = simv
+SIZE7_TEST = axi4_fixed_len0_size7_test
 
-.PHONY: all compile sim wave clean
+.PHONY: all compile sim wave clean sim_size7
 
 all: compile
 
 compile:
-	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV)
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile.log
 
 sim: compile
-	./$(SIMV) $(SIM_FLAGS) -gui=verdi
+	./$(SIMV) $(SIM_FLAGS) -l $(TESTNAME).log
+#-gui=verdi
+
+# Run axi4_fixed_len0_size7_test with SVT_AXI_MAX_DATA_WIDTH=1024
+sim_size7:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    +define+SVT_AXI_MAX_DATA_WIDTH=1024 \
+	    -l compile_$(SIZE7_TEST).log
+	./$(SIMV) +UVM_TESTNAME=$(SIZE7_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=$(SIZE7_TEST) \
+	    -l $(SIZE7_TEST).log -gui=verdi
 
 wave:
-	verdi -sv +incdir+src $(SRC_FILES) -ssf sim.fsdb &
+	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &
 
 clean:
 	rm -rf $(SIMV) simv.daidir csrc ucli.key vc_hdrs.h DVEfiles \

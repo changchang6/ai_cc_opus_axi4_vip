@@ -29,7 +29,7 @@ class axi4_config extends uvm_object;
     uvm_active_passive_enum m_is_active = UVM_ACTIVE;
 
     // Virtual interface
-    virtual axi4_if m_vif;
+    axi4_vif_t m_vif;
 
     function new(string name = "axi4_config");
         super.new(name);

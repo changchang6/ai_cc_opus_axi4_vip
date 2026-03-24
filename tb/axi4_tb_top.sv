@@ -11,12 +11,19 @@ module axi4_tb_top;
     `include "uvm_macros.svh"
     import axi4_pkg::*;
 
-    //-------------------------------------------------------------------------
-    // Parameters
-    //-------------------------------------------------------------------------
-    parameter int DATA_WIDTH = 32;
-    parameter int ADDR_WIDTH = 32;
-    parameter int ID_WIDTH   = 4;
+    // Parameters – inherit compile-time bus-width from SVT_AXI defines
+    `ifndef SVT_AXI_MAX_DATA_WIDTH
+      `define SVT_AXI_MAX_DATA_WIDTH 32
+    `endif
+    `ifndef SVT_AXI_MAX_ADDR_WIDTH
+      `define SVT_AXI_MAX_ADDR_WIDTH 32
+    `endif
+    `ifndef SVT_AXI_MAX_ID_WIDTH
+      `define SVT_AXI_MAX_ID_WIDTH 4
+    `endif
+    parameter int DATA_WIDTH = `SVT_AXI_MAX_DATA_WIDTH;
+    parameter int ADDR_WIDTH = `SVT_AXI_MAX_ADDR_WIDTH;
+    parameter int ID_WIDTH   = `SVT_AXI_MAX_ID_WIDTH;
 
     //-------------------------------------------------------------------------
     // Clock and Reset
@@ -143,7 +150,10 @@ module axi4_tb_top;
     //-------------------------------------------------------------------------
 `ifdef DUMP_WAVE
     initial begin
-        $fsdbDumpfile("sim.fsdb");
+        string fsdb_file;
+        if (!$value$plusargs("FSDB_FILE=%s", fsdb_file))
+            fsdb_file = "sim";
+        $fsdbDumpfile({fsdb_file, ".fsdb"});
         $fsdbDumpvars(0, axi4_tb_top);
     end
 `endif
@@ -152,8 +162,10 @@ module axi4_tb_top;
     // UVM test launch
     //-------------------------------------------------------------------------
     initial begin
-        uvm_config_db #(virtual axi4_system_if)::set(null, "uvm_test_top", "vif", sys_if);
-        run_test("axi4_base_test");
+        uvm_config_db #(virtual axi4_system_if #(.NUM_MASTERS(1), .DATA_WIDTH(DATA_WIDTH),
+                        .ADDR_WIDTH(ADDR_WIDTH), .ID_WIDTH(ID_WIDTH)))::set(
+                        null, "uvm_test_top", "vif", sys_if);
+        run_test();
     end
 
 endmodule : axi4_tb_top

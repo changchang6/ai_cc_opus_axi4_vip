@@ -100,7 +100,7 @@ class axi4_env_cfg extends uvm_object;
     // Virtual interface array – set one entry per master before calling
     // set_axi_system_cfg().  The array must be sized to at least num_masters.
     //-------------------------------------------------------------------------
-    virtual axi4_if m_vif[];
+    axi4_vif_t m_vif[];
 
     //-------------------------------------------------------------------------
     // Internal: per-master axi4_config objects (populated by set_axi_system_cfg)

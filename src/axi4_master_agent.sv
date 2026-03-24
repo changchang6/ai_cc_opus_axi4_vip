@@ -22,7 +22,7 @@ class axi4_master_agent extends uvm_agent;
 
         // If vif not populated through config object, try getting it directly
         if (m_cfg.m_vif == null) begin
-            if (!uvm_config_db #(virtual axi4_if)::get(this, "", "vif", m_cfg.m_vif))
+            if (!uvm_config_db #(axi4_vif_t)::get(this, "", "vif", m_cfg.m_vif))
                 `uvm_fatal("AXI4_AGT", "Cannot get virtual interface from config_db")
         end
 

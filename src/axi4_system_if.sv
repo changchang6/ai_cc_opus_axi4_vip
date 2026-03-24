@@ -42,7 +42,9 @@ interface axi4_system_if #(
     // cannot be accessed via virtual handles in most tools, so we expose
     // plain virtual axi4_if handles here and populate them at time-zero.
     // Variable indices into master_if[] are legal inside the interface body.
-    virtual axi4_if master_vif[NUM_MASTERS];
+    virtual axi4_if #(.DATA_WIDTH(DATA_WIDTH),
+                       .ADDR_WIDTH(ADDR_WIDTH),
+                       .ID_WIDTH  (ID_WIDTH)) master_vif[NUM_MASTERS];
 
     genvar g;
     generate

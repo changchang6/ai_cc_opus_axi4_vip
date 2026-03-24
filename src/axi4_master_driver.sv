@@ -7,7 +7,7 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     `uvm_component_utils(axi4_master_driver)
 
     axi4_config             m_cfg;
-    virtual axi4_if         m_vif;
+    axi4_vif_t              m_vif;
 
     // Outstanding transaction tracking: id -> start_cycle
     longint unsigned        m_wr_pending[logic [7:0]];
