@@ -44,9 +44,9 @@ class axi4_env extends uvm_env;
     // Resolve configuration: prefer axi4_env_cfg; fall back to axi4_config.
     local function void _resolve_cfg();
         axi4_config        legacy_cfg;
-        virtual axi4_system_if #(.DATA_WIDTH(`SVT_AXI_MAX_DATA_WIDTH),
-                                  .ADDR_WIDTH(`SVT_AXI_MAX_ADDR_WIDTH),
-                                  .ID_WIDTH  (`SVT_AXI_MAX_ID_WIDTH)) sys_vif;
+        virtual axi4_system_if #(.DATA_WIDTH(`AI_AXI4_MAX_DATA_WIDTH),
+                                  .ADDR_WIDTH(`AI_AXI4_MAX_ADDR_WIDTH),
+                                  .ID_WIDTH  (`AI_AXI4_MAX_ID_WIDTH)) sys_vif;
 
         if (!uvm_config_db #(axi4_env_cfg)::get(this, "", "m_env_cfg", m_env_cfg)) begin
             // Fall back: build an env_cfg from a legacy axi4_config
@@ -75,9 +75,9 @@ class axi4_env extends uvm_env;
         // Access master_vif[] (virtual axi4_if array) instead of master_if[]
         // (nested interface instance) to allow variable indexing.
         if (m_env_cfg.m_vif.size() < m_env_cfg.num_masters) begin
-            if (uvm_config_db #(virtual axi4_system_if #(.DATA_WIDTH(`SVT_AXI_MAX_DATA_WIDTH),
-                                                          .ADDR_WIDTH(`SVT_AXI_MAX_ADDR_WIDTH),
-                                                          .ID_WIDTH  (`SVT_AXI_MAX_ID_WIDTH)))::get(
+            if (uvm_config_db #(virtual axi4_system_if #(.DATA_WIDTH(`AI_AXI4_MAX_DATA_WIDTH),
+                                                          .ADDR_WIDTH(`AI_AXI4_MAX_ADDR_WIDTH),
+                                                          .ID_WIDTH  (`AI_AXI4_MAX_ID_WIDTH)))::get(
                                 this, "*", "vif", sys_vif)) begin
                 m_env_cfg.m_vif = new[m_env_cfg.num_masters];
                 for (int i = 0; i < m_env_cfg.num_masters; i++)

@@ -11,19 +11,19 @@ module axi4_tb_top;
     `include "uvm_macros.svh"
     import axi4_pkg::*;
 
-    // Parameters – inherit compile-time bus-width from SVT_AXI defines
-    `ifndef SVT_AXI_MAX_DATA_WIDTH
-      `define SVT_AXI_MAX_DATA_WIDTH 32
+    // Parameters – inherit compile-time bus-width from AI_AXI4 defines
+    `ifndef AI_AXI4_MAX_DATA_WIDTH
+      `define AI_AXI4_MAX_DATA_WIDTH 32
     `endif
-    `ifndef SVT_AXI_MAX_ADDR_WIDTH
-      `define SVT_AXI_MAX_ADDR_WIDTH 32
+    `ifndef AI_AXI4_MAX_ADDR_WIDTH
+      `define AI_AXI4_MAX_ADDR_WIDTH 32
     `endif
-    `ifndef SVT_AXI_MAX_ID_WIDTH
-      `define SVT_AXI_MAX_ID_WIDTH 4
+    `ifndef AI_AXI4_MAX_ID_WIDTH
+      `define AI_AXI4_MAX_ID_WIDTH 4
     `endif
-    parameter int DATA_WIDTH = `SVT_AXI_MAX_DATA_WIDTH;
-    parameter int ADDR_WIDTH = `SVT_AXI_MAX_ADDR_WIDTH;
-    parameter int ID_WIDTH   = `SVT_AXI_MAX_ID_WIDTH;
+    parameter int DATA_WIDTH = `AI_AXI4_MAX_DATA_WIDTH;
+    parameter int ADDR_WIDTH = `AI_AXI4_MAX_ADDR_WIDTH;
+    parameter int ID_WIDTH   = `AI_AXI4_MAX_ID_WIDTH;
 
     //-------------------------------------------------------------------------
     // Clock and Reset
@@ -32,7 +32,7 @@ module axi4_tb_top;
     logic rst_n;
 
     initial clk = 0;
-    always #5 clk = ~clk;
+    always #0.5 clk = ~clk;
 
     initial begin
         rst_n = 0;

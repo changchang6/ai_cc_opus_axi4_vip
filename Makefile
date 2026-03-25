@@ -53,10 +53,10 @@ sim: compile
 	./$(SIMV) $(SIM_FLAGS) -l $(TESTNAME).log
 #-gui=verdi
 
-# Run axi4_fixed_len0_size7_test with SVT_AXI_MAX_DATA_WIDTH=1024
+# Run axi4_fixed_len0_size7_test with AI_AXI4_MAX_DATA_WIDTH=1024
 sim_size7:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    +define+SVT_AXI_MAX_DATA_WIDTH=1024 \
+	    +define+AI_AXI4_MAX_DATA_WIDTH=1024 \
 	    -l compile_$(SIZE7_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(SIZE7_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(SIZE7_TEST) \

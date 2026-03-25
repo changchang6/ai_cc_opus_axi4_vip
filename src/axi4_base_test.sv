@@ -14,9 +14,9 @@ class axi4_base_test extends uvm_test;
     endfunction
 
     function void build_phase(uvm_phase phase);
-        virtual axi4_system_if #(.DATA_WIDTH(`SVT_AXI_MAX_DATA_WIDTH),
-                                  .ADDR_WIDTH(`SVT_AXI_MAX_ADDR_WIDTH),
-                                  .ID_WIDTH  (`SVT_AXI_MAX_ID_WIDTH)) sys_vif;
+        virtual axi4_system_if #(.DATA_WIDTH(`AI_AXI4_MAX_DATA_WIDTH),
+                                  .ADDR_WIDTH(`AI_AXI4_MAX_ADDR_WIDTH),
+                                  .ID_WIDTH  (`AI_AXI4_MAX_ID_WIDTH)) sys_vif;
         super.build_phase(phase);
 
         // --- Create and configure env_cfg ---
@@ -34,9 +34,9 @@ class axi4_base_test extends uvm_test;
         m_env_cfg.enable_perf_mon                           = 0;
 
         // Per-master settings (index 0 only for single-master test)
-        m_env_cfg.master_addr_width    [0] = `SVT_AXI_MAX_ADDR_WIDTH;
-        m_env_cfg.master_data_width    [0] = `SVT_AXI_MAX_DATA_WIDTH;
-        m_env_cfg.master_id_width      [0] = `SVT_AXI_MAX_ID_WIDTH;
+        m_env_cfg.master_addr_width    [0] = `AI_AXI4_MAX_ADDR_WIDTH;
+        m_env_cfg.master_data_width    [0] = `AI_AXI4_MAX_DATA_WIDTH;
+        m_env_cfg.master_id_width      [0] = `AI_AXI4_MAX_ID_WIDTH;
         m_env_cfg.ruser_enable         [0] = 0;
         m_env_cfg.aruser_enable        [0] = 0;
         m_env_cfg.awuser_enable        [0] = 0;
@@ -44,9 +44,9 @@ class axi4_base_test extends uvm_test;
         m_env_cfg.max_write_outstanding[0] = 8;
 
         // Virtual interface (provided by tb_top via config_db)
-        if (!uvm_config_db #(virtual axi4_system_if #(.DATA_WIDTH(`SVT_AXI_MAX_DATA_WIDTH),
-                                                       .ADDR_WIDTH(`SVT_AXI_MAX_ADDR_WIDTH),
-                                                       .ID_WIDTH  (`SVT_AXI_MAX_ID_WIDTH)))::get(
+        if (!uvm_config_db #(virtual axi4_system_if #(.DATA_WIDTH(`AI_AXI4_MAX_DATA_WIDTH),
+                                                       .ADDR_WIDTH(`AI_AXI4_MAX_ADDR_WIDTH),
+                                                       .ID_WIDTH  (`AI_AXI4_MAX_ID_WIDTH)))::get(
                              this, "", "vif", sys_vif))
             `uvm_fatal("AXI4_TEST", "Cannot get virtual system interface from config_db")
         m_env_cfg.m_vif = new[m_env_cfg.num_masters];

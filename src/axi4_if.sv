@@ -65,7 +65,7 @@ interface axi4_if #(
     // Clocking Blocks
     //-------------------------------------------------------------------------
     clocking master_cb @(posedge clk);
-        default input #1step output #1;
+        default input #1step output #0.1;
         // Write Address Channel - outputs
         output awaddr, awid, awlen, awsize, awburst, awlock, awcache, awprot, awqos, awregion, awvalid;
         input  awready;
