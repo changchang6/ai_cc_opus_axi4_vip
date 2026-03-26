@@ -61,7 +61,6 @@ package axi4_pkg;
     `include "axi4_env.sv"
     `include "axi4_base_sequence.sv"
     `include "seq_lib.sv"
-    `include "axi4_base_test.sv"
-    `include "axi4_fixed_len0_size7_test.sv"
+    `include "test_lib.sv"
 
 endpackage : axi4_pkg

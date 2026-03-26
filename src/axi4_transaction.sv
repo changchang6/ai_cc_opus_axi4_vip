@@ -55,7 +55,7 @@ class axi4_transaction extends uvm_sequence_item;
     }
 
     constraint c_size {
-        (1 << m_size) <= 16;
+        (1 << m_size) <= (`AI_AXI4_MAX_DATA_WIDTH / 8);
     }
 
     constraint c_data_size {

@@ -1,6 +1,7 @@
 # AXI4\_MASTER\_VIP\_SPEC
 
 # 1.AXI4协议官方文档                                  
+./doc/IHI0022H\_amba\_axi\_protocol\_spec.pdf
 ./doc/102202_0100_01_Introduction_to_AMBA_AXI.pdf
 
 # 2.feature list

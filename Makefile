@@ -39,9 +39,10 @@ endif
 
 TOP        = axi4_tb_top
 SIMV       = simv
-SIZE7_TEST = axi4_fixed_len0_size7_test
+SIZE7_TEST        = axi4_fixed_len0_size7_test
+BURST_INCR_TEST   = burst_incr_test
 
-.PHONY: all compile sim wave clean sim_size7
+.PHONY: all compile sim wave clean sim_size7 sim_burst_incr
 
 all: compile
 
@@ -61,6 +62,14 @@ sim_size7:
 	./$(SIMV) +UVM_TESTNAME=$(SIZE7_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(SIZE7_TEST) \
 	    -l $(SIZE7_TEST).log -gui=verdi
+
+# Run burst_incr_test with default AI_AXI4_MAX_DATA_WIDTH=32
+sim_burst_incr:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_$(BURST_INCR_TEST).log
+	./$(SIMV) +UVM_TESTNAME=$(BURST_INCR_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=$(BURST_INCR_TEST) \
+	    -l $(BURST_INCR_TEST).log
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &
