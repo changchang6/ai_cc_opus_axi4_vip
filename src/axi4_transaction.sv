@@ -145,7 +145,7 @@ class axi4_transaction extends uvm_sequence_item;
 
             m_sub_bursts.push_back(sub);
 
-            cur_addr        = cur_addr + logic'(sub_beats * beat_size);
+            cur_addr        = cur_addr + (sub_beats * beat_size);
             beat_idx        += sub_beats;
             beats_remaining -= sub_beats;
             sub_idx++;

@@ -333,4 +333,27 @@ interface axi4_if #(
     AST_UNALIGNED_FIRST_BEAT_WSTRB: assert property (p_unaligned_first_beat_wstrb)
         else $error("AST_UNALIGNED_FIRST_BEAT_WSTRB: First beat WSTRB has non-zero low bytes for unaligned address");
 
+    // 13. 2KB boundary check: burst must not cross 2KB boundary
+    property p_no_2kb_cross_aw;
+        logic [ADDR_WIDTH-1:0] start_addr, end_addr;
+        @(posedge clk) disable iff (!rst_n)
+        (awvalid && awready, start_addr = awaddr,
+         end_addr = awaddr + ((awlen + 1) << awsize) - 1) |->
+            (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
+    endproperty
+    AST_NO_2KB_CROSS_AW: assert property (p_no_2kb_cross_aw)
+        else $error("AST_NO_2KB_CROSS_AW: Write burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
+                    awaddr, awlen, awsize);
+
+    property p_no_2kb_cross_ar;
+        logic [ADDR_WIDTH-1:0] start_addr, end_addr;
+        @(posedge clk) disable iff (!rst_n)
+        (arvalid && arready, start_addr = araddr,
+         end_addr = araddr + ((arlen + 1) << arsize) - 1) |->
+            (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
+    endproperty
+    AST_NO_2KB_CROSS_AR: assert property (p_no_2kb_cross_ar)
+        else $error("AST_NO_2KB_CROSS_AR: Read burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
+                    araddr, arlen, arsize);
+
 endinterface : axi4_if

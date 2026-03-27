@@ -201,7 +201,7 @@ module axi4_tb_top;
                     logic [ADDR_WIDTH-1:0] next_addr;
 
                     rd_beat_cnt <= rd_beat_cnt + 1;
-                    s_rlast     <= (rd_beat_cnt + 1 == rd_len);
+                    s_rlast     <= (rd_beat_cnt + 1 >= rd_len);
 
                     // Calculate next address based on burst type
                     if (rd_burst == 2'b01)  // INCR

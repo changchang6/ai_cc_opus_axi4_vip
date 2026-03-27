@@ -2,7 +2,7 @@ Magic 271485
 Revision Verdi_O-2018.09-SP2
 
 ; Window Layout <x> <y> <width> <height> <signalwidth> <valuewidth>
-viewPort 0 27 2560 943 247 65
+viewPort 0 27 2560 852 247 65
 
 ; File list:
 ; openDirFile [-d delimiter] [-s time_offset] [-rf auto_bus_rule_file] path_name file_name
@@ -16,16 +16,16 @@ signalSpacing 5
 
 ; windowTimeUnit is used for zoom, cursor & marker
 ; waveform viewport range
-zoom 566025.865314 738394.642010
-cursor 647500.000000
+zoom 48996.514235 87532.589663
+cursor 628600.000000
 marker 0.000000
 
 ; user define markers
 ; userMarker time_pos marker_name color linestyle
 ; visible top row signal index
-top 3
+top 0
 ; marker line index
-markerPos 16
+markerPos 17
 
 ; event list
 ; addEvent event_name event_expression
@@ -63,12 +63,12 @@ addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/awregion[3:0]
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/awsize[2:0]
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/awvalid
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/first_w_beat
+addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/wvalid
 endSubGroup "aw"
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/wdata[31:0]
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/wlast
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/wready
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/wstrb[3:0]
-addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/wvalid
 addSubGroup "ar"
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/ar_len_latch[7:0]
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/araddr[31:0]
@@ -85,12 +85,12 @@ addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/bid[3:0]
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/bready
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/bresp[1:0]
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/bvalid
+addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/rvalid
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/rdata[31:0]
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/rid[3:0]
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/rlast
 addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/rready
 addSignal -h 15 -UNSIGNED -HEX /axi4_tb_top/sys_if/master_if[0]/rresp[1:0]
-addSignal -h 15 /axi4_tb_top/sys_if/master_if[0]/rvalid
 addGroup "G2"
 
 ; getSignalForm Scope Hierarchy Status

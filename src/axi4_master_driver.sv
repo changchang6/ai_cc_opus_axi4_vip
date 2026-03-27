@@ -68,8 +68,28 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
                 end
                 repeat (m_cfg.m_send_interval) @(m_vif.master_cb);
             end else if (txn.m_trans_type == TRANS_READ) begin
-                drive_ar_channel(txn);
-                drive_r_channel(txn);
+                if (txn.m_burst == BURST_INCR &&
+                    (txn.m_len > 8'd15 ||
+                     crosses_2kb_boundary(txn.m_addr[31:0], txn.m_len, txn.m_size))) begin
+                    txn.do_burst_split();
+                    foreach (txn.m_sub_bursts[i]) begin
+                        drive_ar_channel(txn.m_sub_bursts[i]);
+                        drive_r_channel(txn.m_sub_bursts[i]);
+                    end
+                    // Merge sub-burst rdata back to original transaction
+                    txn.m_rdata = new[txn.m_len + 1];
+                    begin
+                        int beat_idx = 0;
+                        foreach (txn.m_sub_bursts[i]) begin
+                            foreach (txn.m_sub_bursts[i].m_rdata[j]) begin
+                                txn.m_rdata[beat_idx++] = txn.m_sub_bursts[i].m_rdata[j];
+                            end
+                        end
+                    end
+                end else begin
+                    drive_ar_channel(txn);
+                    drive_r_channel(txn);
+                end
                 repeat (m_cfg.m_send_interval) @(m_vif.master_cb);
             end
             seq_item_port.item_done();

@@ -32,9 +32,14 @@ SIM_FLAGS  = +UVM_TESTNAME=$(TESTNAME) \
 
 # Waveform dumping: make sim WAVE=1  (output: <TESTNAME>.fsdb)
 WAVE      ?= 1
+GUI 	  ?= 0
 WAVE_FLAGS =
+GUI_FLAGS =
 ifeq ($(WAVE),1)
 WAVE_FLAGS = +define+DUMP_WAVE
+endif
+ifeq ($(GUI),1)
+GUI_FLAGS = -gui=verdi 
 endif
 
 TOP        = axi4_tb_top
@@ -66,10 +71,10 @@ sim_size7:
 # Run burst_incr_test with default AI_AXI4_MAX_DATA_WIDTH=32
 sim_burst_incr:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_INCR_TEST).log
+	    -l compile_$(BURST_INCR_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
 	./$(SIMV) +UVM_TESTNAME=$(BURST_INCR_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_INCR_TEST) \
-	    -l $(BURST_INCR_TEST).log  -gui=verdi
+	    -l $(BURST_INCR_TEST).log $(GUI_FLAGS)
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &
