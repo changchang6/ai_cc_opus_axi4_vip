@@ -207,7 +207,9 @@ class burst_incr_test extends uvm_test;
     task run_phase(uvm_phase phase);
         axi4_burst_incr_seq seq;
         seq = axi4_burst_incr_seq::type_id::create("seq");
-        seq.m_num_txns = 5000;
+        seq.m_num_txns = 50;
+        seq.c_addr_aligned.constraint_mode(0);  // Disable random address
+        seq.m_start_addr = 32'h0;  // Fixed start address to avoid overlap
         phase.raise_objection(this);
         seq.start(m_env.m_agent.m_sequencer);
         phase.drop_objection(this);

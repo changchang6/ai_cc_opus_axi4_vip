@@ -69,7 +69,7 @@ sim_burst_incr:
 	    -l compile_$(BURST_INCR_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_INCR_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_INCR_TEST) \
-	    -l $(BURST_INCR_TEST).log
+	    -l $(BURST_INCR_TEST).log  -gui=verdi
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &

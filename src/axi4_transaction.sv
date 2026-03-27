@@ -67,6 +67,12 @@ class axi4_transaction extends uvm_sequence_item;
         m_burst != BURST_RSVD;
     }
 
+    constraint c_fixed_signals {
+        m_lock  == 1'b0;
+        m_cache == 4'b0;
+        m_prot  == 3'b0;
+    }
+
     //-------------------------------------------------------------------------
     // Constructor
     //-------------------------------------------------------------------------

@@ -174,6 +174,7 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
         word_arr_t        tmp_data;
         int unsigned      bytes_per_beat;
         int unsigned      bytes_per_txn;
+        logic [7:0]       txn_len;
 
         bytes_per_beat = 1 << MAX_SIZE;
         cur_addr       = m_start_addr;
@@ -186,32 +187,31 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
         // Step 3: Send ALL m_num_txns write transactions first
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
+            wr_txn.m_addr.rand_mode(0);
+
             start_item(wr_txn);
 
-            // Step 1: Fix burst=INCR, len inside [1:16], size=max_width
-            // Step 2: Fix address to current aligned address
             if (!wr_txn.randomize() with {
                 m_trans_type  == TRANS_WRITE;
                 m_burst       == BURST_INCR;
                 m_len         inside {[8'd1:8'd16]};
                 m_size        == MAX_SIZE[2:0];
-                m_addr[31:0]  == local::cur_addr;
-                m_addr[63:32] == 32'h0;
             }) `uvm_fatal(get_type_name(), "Write randomization failed")
 
-            // Enable all byte lanes for every beat
+            // Set address after randomize
+            wr_txn.m_addr[31:0]  = cur_addr;
+            wr_txn.m_addr[63:32] = 32'h0;
+
             foreach (wr_txn.m_wstrb[k])
                 wr_txn.m_wstrb[k] = 4'hF;
 
             finish_item(wr_txn);
 
-            // Save address, length, and a copy of write data for read-back
             wr_addr_q.push_back(cur_addr);
             wr_len_q.push_back(wr_txn.m_len);
             tmp_data = wr_txn.m_data;
             wr_data_q.push_back(tmp_data);
 
-            // Advance address by (len+1) * bytes_per_beat
             bytes_per_txn = (int'(wr_txn.m_len) + 1) * bytes_per_beat;
             cur_addr += bytes_per_txn;
         end
