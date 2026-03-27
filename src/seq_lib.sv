@@ -257,3 +257,107 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_burst_incr_seq
+
+//-----------------------------------------------------------------------------
+// axi4_burst_fixed_seq
+//
+// Test steps:
+//   1. Set AXI transfer parameters: len inside [1:16], size=max_width, burst=FIXED
+//   2. Set aligned start address and transaction count (default 5000)
+//   3. Master VIP sends m_num_txns write transactions
+//   4. After ALL write transactions complete, read back and compare
+//-----------------------------------------------------------------------------
+class axi4_burst_fixed_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_burst_fixed_seq)
+
+    localparam int MAX_SIZE = $clog2(`AI_AXI4_MAX_DATA_WIDTH / 8);
+
+    rand bit [31:0] m_start_addr;
+    int unsigned m_num_txns = 5000;
+
+    constraint c_addr_aligned {
+        (m_start_addr & ((1 << MAX_SIZE) - 1)) == 0;
+    }
+
+    function new(string name = "axi4_burst_fixed_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        axi4_transaction  wr_txn, rd_txn;
+        logic [63:0]      cur_addr;
+        logic [63:0]      wr_addr_q[$];
+        logic [31:0]      wr_last_data_q[$];
+        int unsigned      bytes_per_beat;
+
+        bytes_per_beat = 1 << MAX_SIZE;
+        cur_addr       = m_start_addr;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting burst_fixed_seq: start_addr=0x%016h num_txns=%0d size=%0d burst=FIXED len=[1:16]",
+                      cur_addr, m_num_txns, MAX_SIZE),
+            UVM_LOW)
+
+        repeat (m_num_txns) begin
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            wr_txn.m_addr.rand_mode(0);
+
+            start_item(wr_txn);
+
+            if (!wr_txn.randomize() with {
+                m_trans_type  == TRANS_WRITE;
+                m_burst       == BURST_FIXED;
+                m_len         inside {[8'd1:8'd16]};
+                m_size        == MAX_SIZE[2:0];
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            wr_txn.m_addr[31:0]  = cur_addr;
+            wr_txn.m_addr[63:32] = 32'h0;
+
+            foreach (wr_txn.m_wstrb[k])
+                wr_txn.m_wstrb[k] = 4'hF;
+
+            finish_item(wr_txn);
+
+            wr_addr_q.push_back(cur_addr);
+            wr_last_data_q.push_back(wr_txn.m_data[wr_txn.m_len]);
+
+            cur_addr += (int'(wr_txn.m_len) + 1) * bytes_per_beat;
+        end
+
+        `uvm_info(get_type_name(),
+            $sformatf("All %0d write transactions done", m_num_txns),
+            UVM_LOW)
+
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+
+            if (!rd_txn.randomize() with {
+                m_trans_type  == TRANS_READ;
+                m_burst       == BURST_FIXED;
+                m_len         == 8'd0;
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            if (rd_txn.m_rdata[0] !== wr_last_data_q[i]) begin
+                `uvm_error(get_type_name(),
+                    $sformatf("MISMATCH addr=0x%016h: exp=0x%08h got=0x%08h",
+                              wr_addr_q[i], wr_last_data_q[i], rd_txn.m_rdata[0]))
+            end
+
+            `uvm_info(get_type_name(),
+                $sformatf("Read-back pass: addr=0x%016h", wr_addr_q[i]),
+                UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_burst_fixed_seq

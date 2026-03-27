@@ -24,7 +24,7 @@ VCS_FLAGS  = -full64 -sverilog -timescale=1ns/1ps \
 
 # Simulation flags
 #TESTNAME  ?= axi4_base_test
-TESTNAME  ?= axi4_fixed_len0_size7_test
+TESTNAME  ?= burst_fixed_test
 
 SIM_FLAGS  = +UVM_TESTNAME=$(TESTNAME) \
              +UVM_VERBOSITY=UVM_MEDIUM \
@@ -46,8 +46,9 @@ TOP        = axi4_tb_top
 SIMV       = simv
 SIZE7_TEST        = axi4_fixed_len0_size7_test
 BURST_INCR_TEST   = burst_incr_test
+BURST_FIXED_TEST  = burst_fixed_test
 
-.PHONY: all compile sim wave clean sim_size7 sim_burst_incr
+.PHONY: all compile sim wave clean sim_size7 sim_burst_incr sim_burst_fixed
 
 all: compile
 
@@ -56,7 +57,7 @@ compile:
 	    -l compile.log
 
 sim: compile
-	./$(SIMV) $(SIM_FLAGS) -l $(TESTNAME).log
+	./$(SIMV) $(SIM_FLAGS) -l $(TESTNAME).log $(GUI_FLAGS)
 #-gui=verdi
 
 # Run axi4_fixed_len0_size7_test with AI_AXI4_MAX_DATA_WIDTH=1024
@@ -71,10 +72,18 @@ sim_size7:
 # Run burst_incr_test with default AI_AXI4_MAX_DATA_WIDTH=32
 sim_burst_incr:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_INCR_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	    -l compile_$(BURST_INCR_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_INCR_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_INCR_TEST) \
 	    -l $(BURST_INCR_TEST).log $(GUI_FLAGS)
+
+# Run burst_fixed_test
+sim_burst_fixed:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_$(BURST_FIXED_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	./$(SIMV) +UVM_TESTNAME=$(BURST_FIXED_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=$(BURST_FIXED_TEST) \
+	    -l $(BURST_FIXED_TEST).log $(GUI_FLAGS)
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &

@@ -338,7 +338,7 @@ interface axi4_if #(
         logic [ADDR_WIDTH-1:0] start_addr, end_addr;
         @(posedge clk) disable iff (!rst_n)
         (awvalid && awready, start_addr = awaddr,
-         end_addr = awaddr + ((awlen + 1) << awsize) - 1) |->
+         end_addr = (awburst == 2'b00) ? awaddr : awaddr + ((awlen + 1) << awsize) - 1) |->
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty
     AST_NO_2KB_CROSS_AW: assert property (p_no_2kb_cross_aw)
@@ -349,7 +349,7 @@ interface axi4_if #(
         logic [ADDR_WIDTH-1:0] start_addr, end_addr;
         @(posedge clk) disable iff (!rst_n)
         (arvalid && arready, start_addr = araddr,
-         end_addr = araddr + ((arlen + 1) << arsize) - 1) |->
+         end_addr = (arburst == 2'b00) ? araddr : araddr + ((arlen + 1) << arsize) - 1) |->
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty
     AST_NO_2KB_CROSS_AR: assert property (p_no_2kb_cross_ar)

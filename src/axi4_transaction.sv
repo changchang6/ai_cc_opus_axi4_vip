@@ -99,7 +99,7 @@ class axi4_transaction extends uvm_sequence_item;
 
         m_sub_bursts.delete();
 
-        if (m_burst != BURST_INCR) return;
+        if (m_burst != BURST_INCR && m_burst != BURST_FIXED) return;
 
         total_beats    = int'(m_len) + 1;
         beat_size      = 1 << int'(m_size);
@@ -126,7 +126,7 @@ class axi4_transaction extends uvm_sequence_item;
             sub.m_id            = m_id + sub_idx;
             sub.m_len           = 8'(sub_beats - 1);
             sub.m_size          = m_size;
-            sub.m_burst         = BURST_INCR;
+            sub.m_burst         = m_burst;
             sub.m_lock          = m_lock;
             sub.m_cache         = m_cache;
             sub.m_prot          = m_prot;
