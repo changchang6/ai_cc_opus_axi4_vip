@@ -208,6 +208,20 @@ interface axi4_if #(
     AST_AXLEN_RANGE_AR: assert property (p_axlen_range_ar)
         else $error("AST_AXLEN_RANGE: ARLEN=%0d invalid for ARBURST=%0b", arlen, arburst);
 
+    // VIP transaction len limit: len must not exceed 32
+    property p_vip_len_limit_aw;
+        @(posedge clk) disable iff (!rst_n)
+        awvalid |-> (awlen <= 8'd32);
+    endproperty
+    property p_vip_len_limit_ar;
+        @(posedge clk) disable iff (!rst_n)
+        arvalid |-> (arlen <= 8'd32);
+    endproperty
+    AST_VIP_LEN_LIMIT_AW: assert property (p_vip_len_limit_aw)
+        else $error("AST_VIP_LEN_LIMIT: AWLEN=%0d exceeds maximum of 32", awlen);
+    AST_VIP_LEN_LIMIT_AR: assert property (p_vip_len_limit_ar)
+        else $error("AST_VIP_LEN_LIMIT: ARLEN=%0d exceeds maximum of 32", arlen);
+
     // 7. AXBURST encoding: must not be 2'b11
     property p_axburst_encode;
         @(posedge clk) disable iff (!rst_n)
