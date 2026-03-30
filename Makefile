@@ -48,8 +48,9 @@ SIZE7_TEST        = axi4_fixed_len0_size7_test
 BURST_INCR_TEST   = burst_incr_test
 BURST_FIXED_TEST  = burst_fixed_test
 BURST_WRAP_TEST   = burst_wrap_test
+BURST_RANDOM_TEST = burst_random_test
 
-.PHONY: all compile sim wave clean sim_size7 sim_burst_incr sim_burst_fixed sim_burst_wrap
+.PHONY: all compile sim wave clean sim_size7 sim_burst_incr sim_burst_fixed sim_burst_wrap sim_burst_random
 
 all: compile
 
@@ -93,6 +94,14 @@ sim_burst_wrap:
 	./$(SIMV) +UVM_TESTNAME=$(BURST_WRAP_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_WRAP_TEST) \
 	    -l $(BURST_WRAP_TEST).log $(GUI_FLAGS)
+
+# Run burst_random_test
+sim_burst_random:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_$(BURST_RANDOM_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	./$(SIMV) +UVM_TESTNAME=$(BURST_RANDOM_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=$(BURST_RANDOM_TEST) \
+	    -l $(BURST_RANDOM_TEST).log $(GUI_FLAGS)
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &
