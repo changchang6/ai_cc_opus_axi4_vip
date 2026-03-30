@@ -129,9 +129,20 @@ module axi4_tb_top;
                     s_bresp   <= 2'b00;
                     aw_active = 0;
                 end else begin
+                    logic [ADDR_WIDTH-1:0] next_wr_addr;
                     current_aw.beat_cnt = current_aw.beat_cnt + 1;
-                    if (current_aw.burst == 2'b01)
-                        current_aw.addr = wr_addr + (1 << current_aw.size);
+                    if (current_aw.burst == 2'b01) begin  // INCR
+                        next_wr_addr = wr_addr + (1 << current_aw.size);
+                    end else if (current_aw.burst == 2'b10) begin  // WRAP
+                        logic [ADDR_WIDTH-1:0] wrap_boundary;
+                        int wrap_size;
+                        wrap_size = (current_aw.len + 1) * (1 << current_aw.size);
+                        wrap_boundary = (wr_addr / wrap_size) * wrap_size;
+                        next_wr_addr = wrap_boundary + ((wr_addr - wrap_boundary + (1 << current_aw.size)) % wrap_size);
+                    end else begin  // FIXED
+                        next_wr_addr = wr_addr;
+                    end
+                    current_aw.addr = next_wr_addr;
                 end
             end
 
@@ -204,10 +215,17 @@ module axi4_tb_top;
                     s_rlast     <= (rd_beat_cnt + 1 >= rd_len);
 
                     // Calculate next address based on burst type
-                    if (rd_burst == 2'b01)  // INCR
+                    if (rd_burst == 2'b01) begin  // INCR
                         next_addr = rd_addr + (1 << rd_size);
-                    else  // FIXED or WRAP
+                    end else if (rd_burst == 2'b10) begin  // WRAP
+                        logic [ADDR_WIDTH-1:0] wrap_boundary;
+                        int wrap_size;
+                        wrap_size = (rd_len + 1) * (1 << rd_size);
+                        wrap_boundary = (rd_addr / wrap_size) * wrap_size;
+                        next_addr = wrap_boundary + ((rd_addr - wrap_boundary + (1 << rd_size)) % wrap_size);
+                    end else begin  // FIXED
                         next_addr = rd_addr;
+                    end
                     rd_addr <= next_addr;
 
                     // Read next beat from memory (return 0 if not written)
