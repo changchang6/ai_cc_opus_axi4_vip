@@ -20,8 +20,8 @@ class axi4_transaction extends uvm_sequence_item;
     rand logic [2:0]        m_prot;
     rand logic [3:0]        m_qos;
     rand logic [3:0]        m_region;
-    rand logic [31:0]       m_data[];
-    rand logic [3:0]        m_wstrb[];
+    rand logic [31:0]                        m_data[];
+    rand logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] m_wstrb[];
 
     //-------------------------------------------------------------------------
     // Non-randomizable response/timing fields
@@ -90,6 +90,7 @@ class axi4_transaction extends uvm_sequence_item;
         int          beat_idx;
         int          sub_idx;
         logic [31:0] cur_addr;
+        logic [31:0] aligned_start;
         int          beat_size;
         int          beats_remaining;
         int          beats_to_2kb;
@@ -104,6 +105,7 @@ class axi4_transaction extends uvm_sequence_item;
         total_beats    = int'(m_len) + 1;
         beat_size      = 1 << int'(m_size);
         cur_addr       = m_addr[31:0];
+        aligned_start  = (m_addr[31:0] / beat_size) * beat_size;
         beat_idx       = 0;
         sub_idx        = 0;
         beats_remaining = total_beats;
@@ -112,7 +114,9 @@ class axi4_transaction extends uvm_sequence_item;
             // Beats until next 2KB boundary
             bytes_to_2kb   = int'(2048) - int'(cur_addr % 2048);
             beats_to_2kb   = bytes_to_2kb / beat_size;
-            if (beats_to_2kb == 0) beats_to_2kb = 16;
+            // When bytes_to_2kb < beat_size, the current beat straddles the 2KB
+            // boundary; allow it as a single-beat (len=0) sub-burst
+            if (beats_to_2kb == 0) beats_to_2kb = 1;
 
             // Sub-burst length: min(remaining, 16, beats_to_2kb)
             sub_beats = beats_remaining;
@@ -145,8 +149,8 @@ class axi4_transaction extends uvm_sequence_item;
 
             m_sub_bursts.push_back(sub);
 
-            cur_addr        = cur_addr + (sub_beats * beat_size);
             beat_idx        += sub_beats;
+            cur_addr        = aligned_start + beat_idx * beat_size;
             beats_remaining -= sub_beats;
             sub_idx++;
         end
@@ -154,19 +158,19 @@ class axi4_transaction extends uvm_sequence_item;
 
     //-------------------------------------------------------------------------
     // calc_unaligned_wstrb: fix first-beat wstrb for unaligned address
+    // Works for any DATA_WIDTH: clears the low byte_offset bits of wstrb[0]
     //-------------------------------------------------------------------------
     function void calc_unaligned_wstrb();
+        localparam int STRB_W = `AI_AXI4_MAX_DATA_WIDTH / 8;
         int byte_offset;
-        logic [3:0] full_mask;
         int beat_size;
 
         beat_size   = 1 << int'(m_size);
         byte_offset = int'(m_addr[31:0]) % beat_size;
 
-        if (byte_offset == 0) return;
-
-        full_mask      = (beat_size >= 4) ? 4'hF : 4'((1 << beat_size) - 1);
-        m_wstrb[0]     = full_mask & ~4'((1 << byte_offset) - 1);
+        // Shift explicitly-sized all-ones to clear low byte_offset bits.
+        // '1 is unbased-unsized; use replication to get STRB_W-bit all-ones.
+        m_wstrb[0] = ({STRB_W{1'b1}} << byte_offset);
     endfunction
 
     //-------------------------------------------------------------------------

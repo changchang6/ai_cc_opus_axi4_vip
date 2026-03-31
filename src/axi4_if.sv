@@ -315,43 +315,65 @@ interface axi4_if #(
 
     // 12. Unaligned first beat WSTRB: low bytes must be zero for unaligned address
     // Track first beat after AW handshake
-    logic first_w_beat;
-    logic [ADDR_WIDTH-1:0] aw_addr_latch;
-    logic [2:0]            aw_size_latch;
+    logic first_w_beat_pending;
+    logic [ADDR_WIDTH-1:0]   aw_addr_latch;
+    logic [2:0]              aw_size_latch;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            first_w_beat   <= 1'b0;
-            aw_addr_latch  <= '0;
-            aw_size_latch  <= '0;
+            first_w_beat_pending <= 1'b0;
+            aw_addr_latch        <= '0;
+            aw_size_latch        <= '0;
         end else begin
             if (awvalid && awready) begin
                 aw_addr_latch <= awaddr;
                 aw_size_latch <= awsize;
-                first_w_beat  <= 1'b1;
-            end else if (wvalid && wready && first_w_beat) begin
-                first_w_beat <= 1'b0;
+                // Set pending flag only if W0 doesn't arrive simultaneously
+                first_w_beat_pending <= !(wvalid && wready);
+            end else if (wvalid && wready && first_w_beat_pending) begin
+                first_w_beat_pending <= 1'b0;
             end
         end
     end
 
+    // Pulse signal: high for exactly one cycle when first W beat handshakes
+    logic is_first_w_beat;
+    assign is_first_w_beat = wvalid && wready &&
+                             (first_w_beat_pending || (awvalid && awready));
+
+    // Combinatorial: effective address/size for the first W beat
+    // If AW and W arrive on the same cycle, use awaddr/awsize directly
+    logic [ADDR_WIDTH-1:0] eff_aw_addr;
+    logic [2:0]            eff_aw_size;
+    assign eff_aw_addr = (awvalid && awready) ? awaddr : aw_addr_latch;
+    assign eff_aw_size = (awvalid && awready) ? awsize : aw_size_latch;
+
+    // Combinatorial mask: low byte_offset bits = 1
+    logic [DATA_WIDTH/8-1:0] aw_unalign_lo_mask;
+    always_comb begin
+        int byte_off;
+        byte_off = int'(eff_aw_addr) % (1 << int'(eff_aw_size));
+        aw_unalign_lo_mask = '0;
+        for (int b = 0; b < byte_off && b < DATA_WIDTH/8; b++)
+            aw_unalign_lo_mask[b] = 1'b1;
+    end
+
     property p_unaligned_first_beat_wstrb;
-        logic [ADDR_WIDTH-1:0] addr_l;
-        logic [2:0]            size_l;
         @(posedge clk) disable iff (!rst_n)
-        (first_w_beat && wvalid && wready,
-         addr_l = aw_addr_latch, size_l = aw_size_latch) |->
-            // byte_offset = addr % (1<<size); low byte_offset bits of wstrb must be 0
-            ((wstrb & ((DATA_WIDTH/8)'((1 << (addr_l % (1 << size_l))) - 1))) == '0);
+        (is_first_w_beat && (aw_unalign_lo_mask != '0)) |->
+            // low byte_offset bits of wstrb must be 0
+            ((wstrb & aw_unalign_lo_mask) == '0);
     endproperty
     AST_UNALIGNED_FIRST_BEAT_WSTRB: assert property (p_unaligned_first_beat_wstrb)
         else $error("AST_UNALIGNED_FIRST_BEAT_WSTRB: First beat WSTRB has non-zero low bytes for unaligned address");
 
     // 13. 2KB boundary check: burst must not cross 2KB boundary
+    //     Exception: single-beat (len=0) unaligned burst may cross 2KB
+    //     because the beat itself can straddle the boundary.
     property p_no_2kb_cross_aw;
         logic [ADDR_WIDTH-1:0] start_addr, end_addr;
         @(posedge clk) disable iff (!rst_n)
-        (awvalid && awready, start_addr = awaddr,
+        (awvalid && awready && (awlen != 8'd0), start_addr = awaddr,
          end_addr = (awburst == 2'b00) ? awaddr : awaddr + ((awlen + 1) << awsize) - 1) |->
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty
@@ -362,7 +384,7 @@ interface axi4_if #(
     property p_no_2kb_cross_ar;
         logic [ADDR_WIDTH-1:0] start_addr, end_addr;
         @(posedge clk) disable iff (!rst_n)
-        (arvalid && arready, start_addr = araddr,
+        (arvalid && arready && (arlen != 8'd0), start_addr = araddr,
          end_addr = (arburst == 2'b00) ? araddr : araddr + ((arlen + 1) << arsize) - 1) |->
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty

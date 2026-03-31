@@ -57,6 +57,7 @@ module axi4_tb_top;
     typedef struct {
         logic [ID_WIDTH-1:0]   id;
         logic [ADDR_WIDTH-1:0] addr;
+        logic [ADDR_WIDTH-1:0] aligned_start;
         logic [7:0]            len;
         logic [2:0]            size;
         logic [1:0]            burst;
@@ -94,12 +95,13 @@ module axi4_tb_top;
             // Capture AW channel and push to queue
             if (sys_if.master_if[0].awvalid && sys_if.master_if[0].awready) begin
                 aw_info_t aw_info;
-                aw_info.id       = sys_if.master_if[0].awid;
-                aw_info.addr     = sys_if.master_if[0].awaddr;
-                aw_info.len      = sys_if.master_if[0].awlen;
-                aw_info.size     = sys_if.master_if[0].awsize;
-                aw_info.burst    = sys_if.master_if[0].awburst;
-                aw_info.beat_cnt = 0;
+                aw_info.id           = sys_if.master_if[0].awid;
+                aw_info.addr         = sys_if.master_if[0].awaddr;
+                aw_info.len          = sys_if.master_if[0].awlen;
+                aw_info.size         = sys_if.master_if[0].awsize;
+                aw_info.burst        = sys_if.master_if[0].awburst;
+                aw_info.beat_cnt     = 0;
+                aw_info.aligned_start = (aw_info.addr >> aw_info.size) << aw_info.size;
                 aw_queue.push_back(aw_info);
                 $display("[TB] AW: addr=0x%h len=%0d size=%0d", aw_info.addr, aw_info.len, aw_info.size);
             end
@@ -132,7 +134,7 @@ module axi4_tb_top;
                     logic [ADDR_WIDTH-1:0] next_wr_addr;
                     current_aw.beat_cnt = current_aw.beat_cnt + 1;
                     if (current_aw.burst == 2'b01) begin  // INCR
-                        next_wr_addr = wr_addr + (1 << current_aw.size);
+                        next_wr_addr = current_aw.aligned_start + current_aw.beat_cnt * (1 << current_aw.size);
                     end else if (current_aw.burst == 2'b10) begin  // WRAP
                         logic [ADDR_WIDTH-1:0] wrap_boundary;
                         int wrap_size;
@@ -161,6 +163,7 @@ module axi4_tb_top;
     logic [1:0]            s_rresp;
     logic                  s_rlast;
     logic [ADDR_WIDTH-1:0] rd_addr;
+    logic [ADDR_WIDTH-1:0] rd_aligned_start;
     logic [7:0]            rd_len;
     logic [2:0]            rd_size;
     logic [1:0]            rd_burst;
@@ -179,7 +182,8 @@ module axi4_tb_top;
             s_rdata     <= '0;
             s_rresp     <= 2'b00;
             s_rlast     <= 0;
-            rd_addr     <= '0;
+            rd_addr         <= '0;
+            rd_aligned_start <= '0;
             rd_len      <= '0;
             rd_size     <= '0;
             rd_burst    <= '0;
@@ -188,8 +192,9 @@ module axi4_tb_top;
             if (sys_if.master_if[0].arvalid && sys_if.master_if[0].arready && !s_rvalid) begin
                 // Capture AR channel and start read response
                 logic [ADDR_WIDTH-1:0] first_addr;
-                first_addr  = sys_if.master_if[0].araddr;
-                rd_addr     <= first_addr;
+                first_addr       = sys_if.master_if[0].araddr;
+                rd_addr          <= first_addr;
+                rd_aligned_start <= (first_addr >> sys_if.master_if[0].arsize) << sys_if.master_if[0].arsize;
                 rd_len      <= sys_if.master_if[0].arlen;
                 rd_size     <= sys_if.master_if[0].arsize;
                 rd_burst    <= sys_if.master_if[0].arburst;
@@ -216,7 +221,7 @@ module axi4_tb_top;
 
                     // Calculate next address based on burst type
                     if (rd_burst == 2'b01) begin  // INCR
-                        next_addr = rd_addr + (1 << rd_size);
+                        next_addr = rd_aligned_start + (rd_beat_cnt + 1) * (1 << rd_size);
                     end else if (rd_burst == 2'b10) begin  // WRAP
                         logic [ADDR_WIDTH-1:0] wrap_boundary;
                         int wrap_size;

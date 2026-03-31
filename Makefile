@@ -50,8 +50,9 @@ BURST_FIXED_TEST  = burst_fixed_test
 BURST_WRAP_TEST   = burst_wrap_test
 BURST_RANDOM_TEST = burst_random_test
 BURST_SLICE_TEST  = burst_slice_test
+UNALIGNED_ADDR_TEST = unaligned_addr_test
 
-.PHONY: all compile sim wave clean sim_size7 sim_burst_incr sim_burst_fixed sim_burst_wrap sim_burst_random sim_burst_slice
+.PHONY: all compile sim wave clean sim_size7 sim_burst_incr sim_burst_fixed sim_burst_wrap sim_burst_random sim_burst_slice sim_unaligned_addr
 
 all: compile
 
@@ -111,6 +112,14 @@ sim_burst_slice:
 	./$(SIMV) +UVM_TESTNAME=$(BURST_SLICE_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_SLICE_TEST) \
 	    -l $(BURST_SLICE_TEST).log $(GUI_FLAGS)
+
+# Run unaligned_addr_test with AI_AXI4_MAX_DATA_WIDTH=256
+sim_unaligned_addr:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_$(UNALIGNED_ADDR_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=256
+	./$(SIMV) +UVM_TESTNAME=$(UNALIGNED_ADDR_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=$(UNALIGNED_ADDR_TEST) \
+	    -l $(UNALIGNED_ADDR_TEST).log $(GUI_FLAGS)
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &

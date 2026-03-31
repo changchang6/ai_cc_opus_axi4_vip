@@ -149,7 +149,7 @@ package axi4_types_pkg;
 
         end_addr = start_addr + ((len + 1) * (1 << size)) - 1;
         start_boundary = (start_addr / ADDR_BOUNDARY_2KB) * ADDR_BOUNDARY_2KB;
-        end_boundary = (end_addr / ADDR_BOUNDARY_2KB) * ADDR_BOUNDARY_2KB;
+        end_boundary   = (end_addr   / ADDR_BOUNDARY_2KB) * ADDR_BOUNDARY_2KB;
 
         return (start_boundary != end_boundary);
     endfunction

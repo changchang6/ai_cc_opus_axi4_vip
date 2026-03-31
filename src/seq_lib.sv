@@ -72,7 +72,7 @@ class axi4_fixed_len0_size7_seq extends axi4_base_sequence;
             }) `uvm_fatal(get_type_name(), "Write randomization failed")
 
             // All byte lanes enabled (4'hF for 32-bit bus wstrb)
-            wr_txn.m_wstrb[0] = 4'hF;
+            wr_txn.m_wstrb[0] = '1;
 
             finish_item(wr_txn);
 
@@ -203,7 +203,7 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
             wr_txn.m_addr[63:32] = 32'h0;
 
             foreach (wr_txn.m_wstrb[k])
-                wr_txn.m_wstrb[k] = 4'hF;
+                wr_txn.m_wstrb[k] = '1;
 
             finish_item(wr_txn);
 
@@ -315,7 +315,7 @@ class axi4_burst_fixed_seq extends axi4_base_sequence;
             wr_txn.m_addr[63:32] = 32'h0;
 
             foreach (wr_txn.m_wstrb[k])
-                wr_txn.m_wstrb[k] = 4'hF;
+                wr_txn.m_wstrb[k] = '1;
 
             finish_item(wr_txn);
 
@@ -434,7 +434,7 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
             wr_txn.m_addr[63:32] = 32'h0;
 
             foreach (wr_txn.m_wstrb[k])
-                wr_txn.m_wstrb[k] = 4'hF;
+                wr_txn.m_wstrb[k] = '1;
 
             finish_item(wr_txn);
 
@@ -572,7 +572,7 @@ class axi4_burst_random_seq extends axi4_base_sequence;
             wr_txn.m_addr[63:32] = 32'h0;
 
             foreach (wr_txn.m_wstrb[k])
-                wr_txn.m_wstrb[k] = 4'hF;
+                wr_txn.m_wstrb[k] = '1;
 
             finish_item(wr_txn);
 
@@ -710,7 +710,7 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
             wr_txn.m_addr[63:32] = 32'h0;
 
             foreach (wr_txn.m_wstrb[k])
-                wr_txn.m_wstrb[k] = 4'hF;
+                wr_txn.m_wstrb[k] = '1;
 
             finish_item(wr_txn);
 
@@ -761,3 +761,166 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_burst_slice_seq
+
+//-----------------------------------------------------------------------------
+// axi4_unaligned_addr_seq
+//
+// Test steps:
+//   1. Set AXI transfer parameters: len inside [0:255], size=max_width,
+//      burst=INCR
+//   2. Set unaligned start address and transaction count per iteration (100)
+//   3. Repeat 50 iterations, each with a newly randomized unaligned base addr
+//   4. Master VIP sends 50*100=5000 write transactions total
+//      - First beat WSTRB: low byte_offset bits cleared (non-aligned bytes)
+//      - Remaining beats: all byte lanes enabled (full WSTRB)
+//      - Bursts crossing 2KB boundary are auto-split by the driver
+//   5. After ALL write transactions complete, read back each written address
+//      and compare (first beat masked by wstrb to ignore unwritten bytes)
+//-----------------------------------------------------------------------------
+class axi4_unaligned_addr_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_unaligned_addr_seq)
+
+    localparam int MAX_SIZE      = $clog2(`AI_AXI4_MAX_DATA_WIDTH / 8);
+    localparam int BYTES_PER_BEAT = 1 << MAX_SIZE;  // e.g. 128 for 1024-bit bus
+    localparam int STRB_WIDTH     = `AI_AXI4_MAX_DATA_WIDTH / 8;
+
+    int unsigned m_txns_per_iter = 100;
+    int unsigned m_num_iters     = 50;
+
+    function new(string name = "axi4_unaligned_addr_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        typedef logic [31:0]            word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0]  strb_arr_t[];
+
+        axi4_transaction  wr_txn, rd_txn;
+        logic [31:0]      cur_addr;
+        logic [31:0]      wr_addr_q[$];
+        logic [7:0]       wr_len_q[$];
+        word_arr_t        wr_data_q[$], tmp_data;
+        strb_arr_t        wr_wstrb_q[$], tmp_wstrb;  // save wstrb for read-back mask
+        int unsigned      bytes_per_txn;
+        logic [31:0]      base_addr;
+        int               addr_offset;
+        int               num_beats;
+        // Declare at task level to avoid VCS scoped-block variable re-init bug
+        logic [STRB_WIDTH-1:0] beat0_strb;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting unaligned_addr_seq: iters=%0d txns_per_iter=%0d bytes_per_beat=%0d",
+                      m_num_iters, m_txns_per_iter, BYTES_PER_BEAT), UVM_LOW)
+
+        // Step 3 & 4: 50 iterations, each with a random unaligned base address
+        for (int iter = 0; iter < m_num_iters; iter++) begin
+            // Step 2: Random unaligned start address (offset 1 ~ BYTES_PER_BEAT-1)
+            base_addr = iter * 32'h10_0000 + $urandom_range(1, BYTES_PER_BEAT - 1);
+            cur_addr  = base_addr;
+
+            // Step 4: Send 100 write transactions per iteration
+            repeat (m_txns_per_iter) begin
+                wr_txn = axi4_transaction::type_id::create("wr_txn");
+                wr_txn.m_addr.rand_mode(0);
+                start_item(wr_txn);
+
+                // Step 1: len inside [0:255], size=MAX_SIZE, burst=INCR
+                if (!wr_txn.randomize() with {
+                    m_trans_type == TRANS_WRITE;
+                    m_burst      == BURST_INCR;
+                    m_len        inside {[8'd0:8'd255]};
+                    m_size       == MAX_SIZE[2:0];
+                }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+                wr_txn.m_addr[31:0]  = cur_addr;
+                wr_txn.m_addr[63:32] = 32'h0;
+
+                num_beats   = int'(wr_txn.m_len) + 1;
+                addr_offset = int'(cur_addr[31:0]) % BYTES_PER_BEAT;
+
+                // Set WSTRB for all beats:
+                //   beat 0: low addr_offset byte lanes cleared using shift
+                //   all other beats: fully enabled
+                foreach (wr_txn.m_wstrb[k])
+                    wr_txn.m_wstrb[k] = '1;
+                beat0_strb = {STRB_WIDTH{1'b1}} << addr_offset;
+                wr_txn.m_wstrb[0] = beat0_strb;
+
+                finish_item(wr_txn);
+
+                // Save transaction info for read-back verification
+                wr_addr_q.push_back(cur_addr);
+                wr_len_q.push_back(wr_txn.m_len);
+                tmp_data  = wr_txn.m_data;
+                wr_data_q.push_back(tmp_data);
+                tmp_wstrb = wr_txn.m_wstrb;
+                wr_wstrb_q.push_back(tmp_wstrb);
+
+                bytes_per_txn = num_beats * BYTES_PER_BEAT;
+                // Second and subsequent txns in the same iteration start aligned
+                cur_addr += bytes_per_txn;
+            end
+        end
+
+        `uvm_info(get_type_name(),
+            $sformatf("All %0d write transactions done", m_num_iters * m_txns_per_iter), UVM_LOW)
+
+        // Step 5: Read back ALL written addresses and compare with write data
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+
+            if (!rd_txn.randomize() with {
+                m_trans_type  == TRANS_READ;
+                m_burst       == BURST_INCR;
+                m_len         == local::wr_len_q[i];
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            // Beat-by-beat comparison; apply wstrb mask to skip unwritten bytes
+            foreach (wr_data_q[i][j]) begin
+                logic [31:0] exp_data, got_data;
+                logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] beat_strb;
+                bit   mismatch = 0;
+
+                beat_strb = wr_wstrb_q[i][j];
+                exp_data  = wr_data_q[i][j];
+                got_data  = rd_txn.m_rdata[j];
+
+                // Compare only bytes that were actually written (wstrb=1)
+                // For first beat of unaligned txn, low bytes were not written -> skip
+                for (int b = 0; b < 4; b++) begin
+                    // Which wstrb bit covers byte b of the 32-bit data word?
+                    // m_data is 32-bit per word; STRB_WIDTH covers full beat
+                    // beat j covers byte range [j*4 .. j*4+3] within the beat
+                    int strb_bit = j * 4 + b;
+                    if (strb_bit < (`AI_AXI4_MAX_DATA_WIDTH/8)) begin
+                        if (beat_strb[strb_bit]) begin
+                            if (exp_data[b*8 +: 8] !== got_data[b*8 +: 8])
+                                mismatch = 1;
+                        end
+                    end
+                end
+
+                if (mismatch) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%08h beat[%0d]: exp=0x%08h got=0x%08h wstrb=0x%0h",
+                                  wr_addr_q[i], j, exp_data, got_data, beat_strb))
+                end
+            end
+
+            `uvm_info(get_type_name(),
+                $sformatf("Read-back done: addr=0x%08h len=%0d", wr_addr_q[i], wr_len_q[i]),
+                UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_unaligned_addr_seq
