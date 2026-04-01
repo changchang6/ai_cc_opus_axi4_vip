@@ -1184,3 +1184,104 @@ class axi4_max_width_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_max_width_seq
+
+//-----------------------------------------------------------------------------
+// axi4_boundary_2k_seq
+//
+// Test steps:
+//   1. Set AXI transfer parameters: len=16, size=max_width, burst=INCR
+//   2. Set start address to 2K-aligned minus offset to cross 2K boundary
+//   3. Repeat 50 times with different addresses
+//   4. After ALL write transactions complete, read back and verify
+//-----------------------------------------------------------------------------
+class axi4_boundary_2k_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_boundary_2k_seq)
+
+    localparam int MAX_SIZE = $clog2(`AI_AXI4_MAX_DATA_WIDTH / 8);
+
+    function new(string name = "axi4_boundary_2k_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
+
+        axi4_transaction  wr_txn, rd_txn;
+        logic [31:0]      base_addr, cur_addr;
+        logic [31:0]      wr_addr_q[$];
+        word_arr_t        wr_data_q[$];
+        word_arr_t        tmp_data;
+        int unsigned      bytes_per_beat;
+        int unsigned      offset;
+
+        bytes_per_beat = 1 << MAX_SIZE;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting boundary_2k_seq: len=16 size=%0d burst=INCR iterations=250",
+                      MAX_SIZE), UVM_LOW)
+
+        // Step 3: Repeat 250 times
+        for (int iter = 0; iter < 250; iter++) begin
+            // Step 2: Calculate address that crosses 2K boundary
+            base_addr = ((iter + 1) * 32'h800) & ~32'h7FF;  // 2K aligned (0x800 = 2KB)
+            offset = $urandom_range(1, 10) * bytes_per_beat;  // Aligned offset
+            cur_addr = base_addr - offset;
+
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            start_item(wr_txn);
+            wr_txn.m_cfg = m_cfg;
+
+            // Step 1: len=16, size=max_width, burst=INCR
+            if (!wr_txn.randomize() with {
+                m_trans_type  == TRANS_WRITE;
+                m_burst       == BURST_INCR;
+                m_len         == 8'd16;
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::cur_addr;
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            foreach (wr_txn.m_wstrb[k])
+                wr_txn.m_wstrb[k] = '1;
+
+            finish_item(wr_txn);
+
+            wr_addr_q.push_back(cur_addr);
+            tmp_data = wr_txn.m_data;
+            wr_data_q.push_back(tmp_data);
+        end
+
+        `uvm_info(get_type_name(), "All 250 write transactions done", UVM_LOW)
+
+        // Step 4: Read back and verify
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+            rd_txn.m_cfg = m_cfg;
+
+            if (!rd_txn.randomize() with {
+                m_trans_type  == TRANS_READ;
+                m_burst       == BURST_INCR;
+                m_len         == 8'd16;
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            foreach (wr_data_q[i][j]) begin
+                if (rd_txn.m_rdata[j] !== wr_data_q[i][j]) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%08h beat[%0d]: exp=0x%08h got=0x%08h",
+                                  wr_addr_q[i], j, wr_data_q[i][j], rd_txn.m_rdata[j]))
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_boundary_2k_seq
