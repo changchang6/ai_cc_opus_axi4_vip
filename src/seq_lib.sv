@@ -1285,3 +1285,114 @@ class axi4_boundary_2k_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_boundary_2k_seq
+
+//-----------------------------------------------------------------------------
+// axi4_performance_stat_seq
+//
+// Test steps:
+//   1. Set AXI transfer parameters: len inside [1:16], size=max_width, burst=INCR
+//   2. Set aligned start address and transaction count (5000)
+//   3. Master VIP back-to-back sends 5000 write transactions
+//   4. After ALL write transactions complete, read back and compare
+//-----------------------------------------------------------------------------
+class axi4_performance_stat_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_performance_stat_seq)
+
+    localparam int MAX_SIZE = $clog2(`AI_AXI4_MAX_DATA_WIDTH / 8);
+
+    rand bit [31:0] m_start_addr;
+    int unsigned m_num_txns = 5000;
+
+    constraint c_addr_aligned {
+        (m_start_addr & ((1 << MAX_SIZE) - 1)) == 0;
+    }
+
+    function new(string name = "axi4_performance_stat_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
+
+        axi4_transaction wr_txn, rd_txn;
+        logic [31:0] cur_addr;
+        logic [31:0] wr_addr_q[$];
+        logic [7:0]  wr_len_q[$];
+        word_arr_t   wr_data_q[$];
+        word_arr_t   tmp_data;
+        int unsigned bytes_per_beat, bytes_per_txn;
+
+        bytes_per_beat = 1 << MAX_SIZE;
+        cur_addr = m_start_addr;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting performance_stat_seq: start_addr=0x%08h num_txns=%0d size=%0d burst=INCR len=[1:16]",
+                      cur_addr, m_num_txns, MAX_SIZE),
+            UVM_LOW)
+
+        repeat (m_num_txns) begin
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            start_item(wr_txn);
+
+            wr_txn.m_cfg = m_cfg;
+
+            if (!wr_txn.randomize() with {
+                m_trans_type  == TRANS_WRITE;
+                m_burst       == BURST_INCR;
+                m_len         inside {[8'd1:8'd16]};
+                m_size        == MAX_SIZE[2:0];
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            wr_txn.m_addr[31:0]  = cur_addr;
+            wr_txn.m_addr[63:32] = 32'h0;
+
+            foreach (wr_txn.m_wstrb[k])
+                wr_txn.m_wstrb[k] = '1;
+
+            finish_item(wr_txn);
+
+            wr_addr_q.push_back(cur_addr);
+            wr_len_q.push_back(wr_txn.m_len);
+            tmp_data = wr_txn.m_data;
+            wr_data_q.push_back(tmp_data);
+
+            bytes_per_txn = (int'(wr_txn.m_len) + 1) * bytes_per_beat;
+            cur_addr += bytes_per_txn;
+        end
+
+        `uvm_info(get_type_name(),
+            $sformatf("All %0d write transactions done", m_num_txns),
+            UVM_LOW)
+
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
+            if (!rd_txn.randomize() with {
+                m_trans_type  == TRANS_READ;
+                m_burst       == BURST_INCR;
+                m_len         == local::wr_len_q[i];
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            foreach (wr_data_q[i][j]) begin
+                if (rd_txn.m_rdata[j] !== wr_data_q[i][j]) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%08h beat[%0d]: exp=0x%08h got=0x%08h",
+                                  wr_addr_q[i], j, wr_data_q[i][j], rd_txn.m_rdata[j]))
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_performance_stat_seq
