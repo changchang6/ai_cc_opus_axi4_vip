@@ -120,6 +120,13 @@ sim_unaligned_addr:
 	    +FSDB_FILE=$(UNALIGNED_ADDR_TEST) \
 	    -l $(UNALIGNED_ADDR_TEST).log $(GUI_FLAGS)
 
+sim_para_cfg1:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_para_cfg1_test.log +define+AI_AXI4_MAX_DATA_WIDTH=256 +define+AI_AXI4_MAX_ADDR_WIDTH=64 +define+AI_AXI4_MAX_ID_WIDTH=8
+	./$(SIMV) +UVM_TESTNAME=para_cfg1_test +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=sim_para_cfg1 \
+	    -l para_cfg1_test.log $(GUI_FLAGS)
+
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &
 

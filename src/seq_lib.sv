@@ -37,7 +37,7 @@ class axi4_fixed_len0_size7_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
 
         axi4_transaction wr_txn, rd_txn;
         logic [31:0] cur_addr;
@@ -62,6 +62,8 @@ class axi4_fixed_len0_size7_seq extends axi4_base_sequence;
             wr_txn.c_size.constraint_mode(0);
 
             // Step 1: Fix len=0 and size=7; Step 2: fix address
+            wr_txn.m_cfg = m_cfg;
+
             if (!wr_txn.randomize() with {
                 m_trans_type  == TRANS_WRITE;
                 m_burst       == BURST_INCR;
@@ -98,6 +100,9 @@ class axi4_fixed_len0_size7_seq extends axi4_base_sequence;
             start_item(rd_txn);
 
             rd_txn.c_size.constraint_mode(0);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type  == TRANS_READ;
@@ -164,7 +169,7 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
 
         axi4_transaction  wr_txn, rd_txn;
         logic [31:0]      cur_addr;
@@ -190,6 +195,9 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
             wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
+
+            wr_txn.m_cfg = m_cfg;
+
 
             if (!wr_txn.randomize() with {
                 m_trans_type  == TRANS_WRITE;
@@ -227,6 +235,9 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type  == TRANS_READ;
@@ -304,6 +315,9 @@ class axi4_burst_fixed_seq extends axi4_base_sequence;
 
             start_item(wr_txn);
 
+            wr_txn.m_cfg = m_cfg;
+
+
             if (!wr_txn.randomize() with {
                 m_trans_type  == TRANS_WRITE;
                 m_burst       == BURST_FIXED;
@@ -334,6 +348,9 @@ class axi4_burst_fixed_seq extends axi4_base_sequence;
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type  == TRANS_READ;
@@ -384,7 +401,7 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
 
         axi4_transaction  wr_txn, rd_txn;
         logic [31:0]      wr_addr_q[$];
@@ -423,6 +440,9 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
 
             start_item(wr_txn);
 
+            wr_txn.m_cfg = m_cfg;
+
+
             if (!wr_txn.randomize() with {
                 m_trans_type == TRANS_WRITE;
                 m_burst      == BURST_WRAP;
@@ -455,6 +475,9 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
             rd_txn.m_addr.rand_mode(0);
 
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type == TRANS_READ;
@@ -512,7 +535,7 @@ class axi4_burst_random_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
 
         axi4_transaction  wr_txn, rd_txn;
         logic [31:0]      wr_addr_q[$];
@@ -539,6 +562,9 @@ class axi4_burst_random_seq extends axi4_base_sequence;
             wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
+
+            wr_txn.m_cfg = m_cfg;
+
 
             if (!wr_txn.randomize() with {
                 m_trans_type == TRANS_WRITE;
@@ -600,6 +626,8 @@ class axi4_burst_random_seq extends axi4_base_sequence;
             start_item(rd_txn);
 
             if (wr_burst_q[i] == BURST_FIXED) begin
+                rd_txn.m_cfg = m_cfg;
+
                 if (!rd_txn.randomize() with {
                     m_trans_type == TRANS_READ;
                     m_burst == BURST_FIXED;
@@ -609,6 +637,8 @@ class axi4_burst_random_seq extends axi4_base_sequence;
                     m_addr[63:32] == 32'h0;
                 }) `uvm_fatal(get_type_name(), "Read randomization failed")
             end else begin
+                rd_txn.m_cfg = m_cfg;
+
                 if (!rd_txn.randomize() with {
                     m_trans_type == TRANS_READ;
                     m_burst == local::wr_burst_q[i];
@@ -674,7 +704,7 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
 
         axi4_transaction  wr_txn, rd_txn;
         logic [31:0]      cur_addr;
@@ -698,6 +728,9 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
             wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
+
+            wr_txn.m_cfg = m_cfg;
+
 
             if (!wr_txn.randomize() with {
                 m_trans_type  == TRANS_WRITE;
@@ -732,6 +765,9 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type  == TRANS_READ;
@@ -792,7 +828,7 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0]            word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0]    word_arr_t[];
         typedef logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0]  strb_arr_t[];
 
         axi4_transaction  wr_txn, rd_txn;
@@ -825,6 +861,8 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
                 start_item(wr_txn);
 
                 // Step 1: len inside [0:255], size=MAX_SIZE, burst=INCR
+                wr_txn.m_cfg = m_cfg;
+
                 if (!wr_txn.randomize() with {
                     m_trans_type == TRANS_WRITE;
                     m_burst      == BURST_INCR;
@@ -871,6 +909,9 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type  == TRANS_READ;
@@ -946,7 +987,7 @@ class axi4_narrow_seq extends axi4_base_sequence;
     endfunction
 
     task body();
-        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
         typedef logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] strb_arr_t[];
 
         axi4_transaction wr_txn, rd_txn;
@@ -968,6 +1009,9 @@ class axi4_narrow_seq extends axi4_base_sequence;
             wr_txn = axi4_transaction::type_id::create("wr_txn");
             wr_txn.m_addr.rand_mode(0);
             start_item(wr_txn);
+
+            wr_txn.m_cfg = m_cfg;
+
 
             if (!wr_txn.randomize() with {
                 m_trans_type == TRANS_WRITE;
@@ -1007,6 +1051,9 @@ class axi4_narrow_seq extends axi4_base_sequence;
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
             start_item(rd_txn);
+
+            rd_txn.m_cfg = m_cfg;
+
 
             if (!rd_txn.randomize() with {
                 m_trans_type == TRANS_READ;
@@ -1053,3 +1100,87 @@ class axi4_narrow_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_narrow_seq
+
+//-----------------------------------------------------------------------------
+// axi4_max_width_seq: Test with maximum configured widths
+//-----------------------------------------------------------------------------
+class axi4_max_width_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_max_width_seq)
+
+    int unsigned m_num_txns = 100;
+
+    function new(string name = "axi4_max_width_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        axi4_transaction wr_txn, rd_txn;
+        logic [7:0] max_id;
+        logic [2:0] max_size;
+        logic [63:0] wr_addr_q[$];
+        logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] wr_data_q[$][$];
+
+        if (m_cfg == null) begin
+            `uvm_fatal(get_type_name(), "m_cfg is null")
+        end
+
+        max_id = (8'h1 << m_cfg.m_id_width) - 1;
+        max_size = $clog2(m_cfg.m_data_width / 8);
+
+        `uvm_info(get_type_name(),
+            $sformatf("Config: addr_width=%0d data_width=%0d id_width=%0d, max_id=0x%0h max_size=%0d",
+                      m_cfg.m_addr_width, m_cfg.m_data_width, m_cfg.m_id_width, max_id, max_size), UVM_LOW)
+
+        // Write phase
+        repeat (m_num_txns) begin
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            start_item(wr_txn);
+            wr_txn.m_cfg = m_cfg;
+            if (!wr_txn.randomize() with {
+                m_trans_type == TRANS_WRITE;
+                m_id == max_id;
+                m_size == max_size;
+                m_len inside {[0:3]};
+                m_burst == BURST_INCR;
+                m_addr[2:0] == 3'b000;
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            foreach (wr_txn.m_wstrb[j]) wr_txn.m_wstrb[j] = '1;
+
+            `uvm_info(get_type_name(),
+                $sformatf("WR: addr=0x%0h id=0x%0h size=%0d len=%0d data[0]=0x%0h",
+                          wr_txn.m_addr, wr_txn.m_id, wr_txn.m_size, wr_txn.m_len, wr_txn.m_data[0]), UVM_MEDIUM)
+            wr_addr_q.push_back(wr_txn.m_addr);
+            wr_data_q.push_back(wr_txn.m_data);
+            finish_item(wr_txn);
+        end
+
+        // Read back and verify
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create("rd_txn");
+            start_item(rd_txn);
+            rd_txn.m_cfg = m_cfg;
+            if (!rd_txn.randomize() with {
+                m_trans_type == TRANS_READ;
+                m_addr == wr_addr_q[i];
+                m_id == max_id;
+                m_size == max_size;
+                m_len == wr_data_q[i].size() - 1;
+                m_burst == BURST_INCR;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+            finish_item(rd_txn);
+
+            // Verify
+            foreach (rd_txn.m_rdata[j]) begin
+                if (rd_txn.m_rdata[j] !== wr_data_q[i][j]) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%0h beat[%0d]: exp=0x%0h got=0x%0h",
+                                  wr_addr_q[i], j, wr_data_q[i][j], rd_txn.m_rdata[j]))
+                end
+            end
+            `uvm_info(get_type_name(),
+                $sformatf("RD: addr=0x%0h data[0]=0x%0h MATCH", wr_addr_q[i], rd_txn.m_rdata[0]), UVM_MEDIUM)
+        end
+    endtask
+
+endclass : axi4_max_width_seq

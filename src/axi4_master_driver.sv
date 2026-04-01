@@ -131,8 +131,8 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     endtask
 
     task drive_aw_channel(axi4_transaction txn);
-        m_vif.master_cb.awaddr   <= txn.m_addr[31:0];
-        m_vif.master_cb.awid     <= txn.m_id[3:0];
+        m_vif.master_cb.awaddr   <= txn.m_addr;
+        m_vif.master_cb.awid     <= txn.m_id;
         m_vif.master_cb.awlen    <= txn.m_len;
         m_vif.master_cb.awsize   <= txn.m_size;
         m_vif.master_cb.awburst  <= txn.m_burst;
@@ -179,8 +179,8 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     // Read channel: AR + R
     //-------------------------------------------------------------------------
     task drive_ar_channel(axi4_transaction txn);
-        m_vif.master_cb.araddr   <= txn.m_addr[31:0];
-        m_vif.master_cb.arid     <= txn.m_id[3:0];
+        m_vif.master_cb.araddr   <= txn.m_addr;
+        m_vif.master_cb.arid     <= txn.m_id;
         m_vif.master_cb.arlen    <= txn.m_len;
         m_vif.master_cb.arsize   <= txn.m_size;
         m_vif.master_cb.arburst  <= txn.m_burst;

@@ -9,9 +9,16 @@
 class axi4_base_sequence extends uvm_sequence #(axi4_transaction);
     `uvm_object_utils(axi4_base_sequence)
 
+    axi4_config m_cfg;
+
     function new(string name = "axi4_base_sequence");
         super.new(name);
     endfunction
+
+    task pre_body();
+        if (!uvm_config_db #(axi4_config)::get(m_sequencer, "", "m_cfg", m_cfg))
+            `uvm_warning("AXI4_SEQ", "Cannot get axi4_config from config_db")
+    endtask
 
     task pre_start();
         if (get_starting_phase() != null)
@@ -48,6 +55,7 @@ class axi4_write_seq extends axi4_base_sequence;
         axi4_transaction txn;
         txn = axi4_transaction::type_id::create("wr_txn");
         start_item(txn);
+        txn.m_cfg = m_cfg;
         if (!txn.randomize() with {
             m_trans_type == TRANS_WRITE;
             m_addr[31:0]  == local::m_addr;
@@ -84,6 +92,7 @@ class axi4_read_seq extends axi4_base_sequence;
         axi4_transaction txn;
         txn = axi4_transaction::type_id::create("rd_txn");
         start_item(txn);
+        txn.m_cfg = m_cfg;
         if (!txn.randomize() with {
             m_trans_type == TRANS_READ;
             m_addr[31:0]  == local::m_addr;
@@ -113,6 +122,7 @@ class axi4_rand_seq extends axi4_base_sequence;
         repeat (m_num_txns) begin
             txn = axi4_transaction::type_id::create("rand_txn");
             start_item(txn);
+            txn.m_cfg = m_cfg;
             if (!txn.randomize() with {
                 m_burst != BURST_RSVD;
                 m_len   <= 8'd15;
@@ -142,6 +152,7 @@ class axi4_wrap_seq extends axi4_base_sequence;
         foreach (wrap_lens[i]) begin
             txn = axi4_transaction::type_id::create($sformatf("wrap_txn_%0d", i));
             start_item(txn);
+            txn.m_cfg = m_cfg;
             if (!txn.randomize() with {
                 m_trans_type == TRANS_WRITE;
                 m_burst      == BURST_WRAP;
@@ -170,6 +181,7 @@ class axi4_split_seq extends axi4_base_sequence;
         axi4_transaction txn;
         txn = axi4_transaction::type_id::create("split_txn");
         start_item(txn);
+        txn.m_cfg = m_cfg;
         if (!txn.randomize() with {
             m_trans_type == TRANS_WRITE;
             m_burst      == BURST_INCR;
@@ -196,6 +208,7 @@ class axi4_unaligned_seq extends axi4_base_sequence;
         axi4_transaction txn;
         txn = axi4_transaction::type_id::create("unaligned_txn");
         start_item(txn);
+        txn.m_cfg = m_cfg;
         if (!txn.randomize() with {
             m_trans_type == TRANS_WRITE;
             m_burst      == BURST_INCR;

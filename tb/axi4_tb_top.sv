@@ -116,17 +116,30 @@ module axi4_tb_top;
                     aw_active = 1;
                 end
 
-                wr_addr = current_aw.addr;
+                // Calculate address for current beat
+                if (current_aw.beat_cnt == 0) begin
+                    wr_addr = current_aw.addr;
+                end else if (current_aw.burst == 2'b01) begin  // INCR
+                    wr_addr = current_aw.aligned_start + current_aw.beat_cnt * (1 << current_aw.size);
+                end else if (current_aw.burst == 2'b10) begin  // WRAP
+                    logic [ADDR_WIDTH-1:0] wrap_boundary;
+                    int wrap_size;
+                    wrap_size = (current_aw.len + 1) * (1 << current_aw.size);
+                    wrap_boundary = (current_aw.addr / wrap_size) * wrap_size;
+                    wr_addr = wrap_boundary + ((current_aw.addr - wrap_boundary + current_aw.beat_cnt * (1 << current_aw.size)) % wrap_size);
+                end else begin  // FIXED
+                    wr_addr = current_aw.addr;
+                end
+
                 $display("[TB] W: addr=0x%h data=0x%h wstrb=0x%h last=%0d", wr_addr, sys_if.master_if[0].wdata, sys_if.master_if[0].wstrb, sys_if.master_if[0].wlast);
 
-                // Write to memory: use bus-aligned base address so that byte lane i
-                // maps to the correct byte address (handles narrow transfers correctly)
+                // Write to memory: only write bytes indicated by size
                 begin
-                    logic [ADDR_WIDTH-1:0] bus_aligned_wr_addr;
-                    bus_aligned_wr_addr = wr_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
-                    for (int i = 0; i < DATA_WIDTH/8; i++) begin
+                    int bytes_per_beat;
+                    bytes_per_beat = 1 << current_aw.size;
+                    for (int i = 0; i < bytes_per_beat; i++) begin
                         if (sys_if.master_if[0].wstrb[i])
-                            mem[bus_aligned_wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
+                            mem[wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
                     end
                 end
 
@@ -136,20 +149,7 @@ module axi4_tb_top;
                     s_bresp   <= 2'b00;
                     aw_active = 0;
                 end else begin
-                    logic [ADDR_WIDTH-1:0] next_wr_addr;
                     current_aw.beat_cnt = current_aw.beat_cnt + 1;
-                    if (current_aw.burst == 2'b01) begin  // INCR
-                        next_wr_addr = current_aw.aligned_start + current_aw.beat_cnt * (1 << current_aw.size);
-                    end else if (current_aw.burst == 2'b10) begin  // WRAP
-                        logic [ADDR_WIDTH-1:0] wrap_boundary;
-                        int wrap_size;
-                        wrap_size = (current_aw.len + 1) * (1 << current_aw.size);
-                        wrap_boundary = (wr_addr / wrap_size) * wrap_size;
-                        next_wr_addr = wrap_boundary + ((wr_addr - wrap_boundary + (1 << current_aw.size)) % wrap_size);
-                    end else begin  // FIXED
-                        next_wr_addr = wr_addr;
-                    end
-                    current_aw.addr = next_wr_addr;
                 end
             end
 
@@ -210,13 +210,15 @@ module axi4_tb_top;
                 s_rlast     <= (sys_if.master_if[0].arlen == 0);
                 $display("[TB] AR: addr=0x%h len=%0d size=%0d", first_addr, sys_if.master_if[0].arlen, sys_if.master_if[0].arsize);
 
-                // Read first beat from memory using bus-aligned base (handles narrow transfers)
+                // Read first beat from memory
                 begin
-                    logic [ADDR_WIDTH-1:0] bus_aligned_rd_addr;
-                    bus_aligned_rd_addr = first_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
-                    for (int i = 0; i < DATA_WIDTH/8; i++)
-                        s_rdata[i*8 +: 8] <= mem.exists(bus_aligned_rd_addr + i) ? mem[bus_aligned_rd_addr + i] : 8'h00;
-                    $display("[TB] R: addr=0x%h data=0x%h", first_addr, {mem[bus_aligned_rd_addr+3], mem[bus_aligned_rd_addr+2], mem[bus_aligned_rd_addr+1], mem[bus_aligned_rd_addr]});
+                    int bytes_per_beat;
+                    bytes_per_beat = 1 << sys_if.master_if[0].arsize;
+                    for (int i = 0; i < bytes_per_beat; i++)
+                        s_rdata[i*8 +: 8] <= mem.exists(first_addr + i) ? mem[first_addr + i] : 8'h00;
+                    for (int i = bytes_per_beat; i < DATA_WIDTH/8; i++)
+                        s_rdata[i*8 +: 8] <= 8'h00;
+                    $display("[TB] R: addr=0x%h data=0x%h", first_addr, s_rdata);
                 end
             end else if (s_rvalid && sys_if.master_if[0].rready) begin
                 if (s_rlast) begin
@@ -242,13 +244,15 @@ module axi4_tb_top;
                     end
                     rd_addr <= next_addr;
 
-                    // Read next beat from memory using bus-aligned base (handles narrow transfers)
+                    // Read next beat from memory
                     begin
-                        logic [ADDR_WIDTH-1:0] bus_aligned_next_addr;
-                        bus_aligned_next_addr = next_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
-                        for (int i = 0; i < DATA_WIDTH/8; i++)
-                            s_rdata[i*8 +: 8] <= mem.exists(bus_aligned_next_addr + i) ? mem[bus_aligned_next_addr + i] : 8'h00;
-                        $display("[TB] R: addr=0x%h data=0x%h", next_addr, {mem[bus_aligned_next_addr+3], mem[bus_aligned_next_addr+2], mem[bus_aligned_next_addr+1], mem[bus_aligned_next_addr]});
+                        int bytes_per_beat;
+                        bytes_per_beat = 1 << rd_size;
+                        for (int i = 0; i < bytes_per_beat; i++)
+                            s_rdata[i*8 +: 8] <= mem.exists(next_addr + i) ? mem[next_addr + i] : 8'h00;
+                        for (int i = bytes_per_beat; i < DATA_WIDTH/8; i++)
+                            s_rdata[i*8 +: 8] <= 8'h00;
+                        $display("[TB] R: addr=0x%h data=0x%h", next_addr, s_rdata);
                     end
                 end
             end

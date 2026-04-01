@@ -7,6 +7,11 @@ class axi4_transaction extends uvm_sequence_item;
     `uvm_object_utils(axi4_transaction)
 
     //-------------------------------------------------------------------------
+    // Configuration handle
+    //-------------------------------------------------------------------------
+    axi4_config m_cfg;
+
+    //-------------------------------------------------------------------------
     // Randomizable fields
     //-------------------------------------------------------------------------
     rand axi4_trans_type_e  m_trans_type;
@@ -20,15 +25,15 @@ class axi4_transaction extends uvm_sequence_item;
     rand logic [2:0]        m_prot;
     rand logic [3:0]        m_qos;
     rand logic [3:0]        m_region;
-    rand logic [31:0]                        m_data[];
-    rand logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] m_wstrb[];
+    rand logic [`AI_AXI4_MAX_DATA_WIDTH-1:0]     m_data[];
+    rand logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0]   m_wstrb[];
 
     //-------------------------------------------------------------------------
     // Non-randomizable response/timing fields
     //-------------------------------------------------------------------------
     logic [1:0]  m_bresp;
     logic [1:0]  m_rresp[];
-    logic [31:0] m_rdata[];
+    logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] m_rdata[];
 
     longint unsigned m_aw_accept_time;
     longint unsigned m_wlast_time;
@@ -45,6 +50,14 @@ class axi4_transaction extends uvm_sequence_item;
     //-------------------------------------------------------------------------
     // Constraints
     //-------------------------------------------------------------------------
+    constraint c_cfg_limits {
+        if (m_cfg != null) {
+            m_addr < (64'h1 << m_cfg.m_addr_width);
+            m_id < (8'h1 << m_cfg.m_id_width);
+            (1 << m_size) <= (m_cfg.m_data_width / 8);
+        }
+    }
+
     constraint c_burst_len {
         if (m_burst == BURST_FIXED)
             m_len <= 8'd15;
@@ -55,13 +68,22 @@ class axi4_transaction extends uvm_sequence_item;
     }
 
     constraint c_size {
-        (1 << m_size) <= (`AI_AXI4_MAX_DATA_WIDTH / 8);
+        if (m_cfg == null)
+            (1 << m_size) <= (`AI_AXI4_MAX_DATA_WIDTH / 8);
     }
 
     constraint c_data_size {
         m_data.size()  == m_len + 1;
         m_wstrb.size() == m_len + 1;
     }
+
+    function void post_randomize();
+        if (m_cfg != null && m_cfg.m_data_width < `AI_AXI4_MAX_DATA_WIDTH) begin
+            foreach (m_data[i]) begin
+                m_data[i] = m_data[i] & ((`AI_AXI4_MAX_DATA_WIDTH'h1 << m_cfg.m_data_width) - 1);
+            end
+        end
+    endfunction
 
     constraint c_burst_valid {
         m_burst != BURST_RSVD;
@@ -173,7 +195,7 @@ class axi4_transaction extends uvm_sequence_item;
 
             valid_bytes = (byte_offset + beat_size <= STRB_W) ? beat_size : (STRB_W - byte_offset);
             m_wstrb[i] = STRB_W'((STRB_W'(1 << valid_bytes) - 1) << byte_offset);
-            m_data[i] = (m_data[i] & ((32'h1 << (valid_bytes * 8)) - 1)) << (byte_offset * 8);
+            m_data[i] = (m_data[i] & ((`AI_AXI4_MAX_DATA_WIDTH'h1 << (valid_bytes * 8)) - 1)) << (byte_offset * 8);
 
             if (m_burst == BURST_INCR)
                 addr += beat_size;
