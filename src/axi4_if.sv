@@ -392,4 +392,19 @@ interface axi4_if #(
         else $error("AST_NO_2KB_CROSS_AR: Read burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
                     araddr, arlen, arsize);
 
+    // 14. Narrow transfer WSTRB check for size=1 (2-byte) first beat
+    property p_narrow_size1_wstrb;
+        int byte_offset, valid_bytes;
+        logic [DATA_WIDTH/8-1:0] expected_wstrb;
+        @(posedge clk) disable iff (!rst_n)
+        (is_first_w_beat && (eff_aw_size == 3'd1),
+         byte_offset = int'(eff_aw_addr) % (DATA_WIDTH/8),
+         valid_bytes = (byte_offset + 2 <= DATA_WIDTH/8) ? 2 : (DATA_WIDTH/8 - byte_offset),
+         expected_wstrb = (DATA_WIDTH/8)'((1 << valid_bytes) - 1) << byte_offset) |->
+            (wstrb == expected_wstrb);
+    endproperty
+    AST_NARROW_SIZE1_WSTRB: assert property (p_narrow_size1_wstrb)
+        else $error("AST_NARROW_SIZE1_WSTRB: size=1 first beat WSTRB=0x%h, expected=0x%h at addr=0x%h",
+                    wstrb, (DATA_WIDTH/8)'((1 << ((int'(eff_aw_addr) % (DATA_WIDTH/8) + 2 <= DATA_WIDTH/8) ? 2 : (DATA_WIDTH/8 - int'(eff_aw_addr) % (DATA_WIDTH/8)))) - 1) << (int'(eff_aw_addr) % (DATA_WIDTH/8)), eff_aw_addr);
+
 endinterface : axi4_if

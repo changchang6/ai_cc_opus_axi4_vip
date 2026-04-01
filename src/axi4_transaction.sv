@@ -157,20 +157,29 @@ class axi4_transaction extends uvm_sequence_item;
     endfunction
 
     //-------------------------------------------------------------------------
-    // calc_unaligned_wstrb: fix first-beat wstrb for unaligned address
-    // Works for any DATA_WIDTH: clears the low byte_offset bits of wstrb[0]
+    // calc_unaligned_wstrb: fix wstrb and data alignment for narrow transfers
     //-------------------------------------------------------------------------
     function void calc_unaligned_wstrb();
         localparam int STRB_W = `AI_AXI4_MAX_DATA_WIDTH / 8;
-        int byte_offset;
         int beat_size;
+        logic [31:0] addr;
 
-        beat_size   = 1 << int'(m_size);
-        byte_offset = int'(m_addr[31:0]) % beat_size;
+        beat_size = 1 << int'(m_size);
+        addr = m_addr[31:0];
 
-        // Shift explicitly-sized all-ones to clear low byte_offset bits.
-        // '1 is unbased-unsized; use replication to get STRB_W-bit all-ones.
-        m_wstrb[0] = ({STRB_W{1'b1}} << byte_offset);
+        for (int i = 0; i <= m_len; i++) begin
+            int byte_offset = int'(addr) % STRB_W;
+            int valid_bytes;
+
+            valid_bytes = (byte_offset + beat_size <= STRB_W) ? beat_size : (STRB_W - byte_offset);
+            m_wstrb[i] = STRB_W'((STRB_W'(1 << valid_bytes) - 1) << byte_offset);
+            m_data[i] = (m_data[i] & ((32'h1 << (valid_bytes * 8)) - 1)) << (byte_offset * 8);
+
+            if (m_burst == BURST_INCR)
+                addr += beat_size;
+            else if (m_burst == BURST_FIXED)
+                addr = addr;
+        end
     endfunction
 
     //-------------------------------------------------------------------------

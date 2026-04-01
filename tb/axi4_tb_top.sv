@@ -119,10 +119,15 @@ module axi4_tb_top;
                 wr_addr = current_aw.addr;
                 $display("[TB] W: addr=0x%h data=0x%h wstrb=0x%h last=%0d", wr_addr, sys_if.master_if[0].wdata, sys_if.master_if[0].wstrb, sys_if.master_if[0].wlast);
 
-                // Write to memory
-                for (int i = 0; i < DATA_WIDTH/8; i++) begin
-                    if (sys_if.master_if[0].wstrb[i])
-                        mem[wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
+                // Write to memory: use bus-aligned base address so that byte lane i
+                // maps to the correct byte address (handles narrow transfers correctly)
+                begin
+                    logic [ADDR_WIDTH-1:0] bus_aligned_wr_addr;
+                    bus_aligned_wr_addr = wr_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
+                    for (int i = 0; i < DATA_WIDTH/8; i++) begin
+                        if (sys_if.master_if[0].wstrb[i])
+                            mem[bus_aligned_wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
+                    end
                 end
 
                 if (sys_if.master_if[0].wlast) begin
@@ -205,10 +210,14 @@ module axi4_tb_top;
                 s_rlast     <= (sys_if.master_if[0].arlen == 0);
                 $display("[TB] AR: addr=0x%h len=%0d size=%0d", first_addr, sys_if.master_if[0].arlen, sys_if.master_if[0].arsize);
 
-                // Read first beat from memory (return 0 if not written)
-                for (int i = 0; i < DATA_WIDTH/8; i++)
-                    s_rdata[i*8 +: 8] <= mem.exists(first_addr + i) ? mem[first_addr + i] : 8'h00;
-                $display("[TB] R: addr=0x%h data=0x%h", first_addr, {mem[first_addr+3], mem[first_addr+2], mem[first_addr+1], mem[first_addr]});
+                // Read first beat from memory using bus-aligned base (handles narrow transfers)
+                begin
+                    logic [ADDR_WIDTH-1:0] bus_aligned_rd_addr;
+                    bus_aligned_rd_addr = first_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
+                    for (int i = 0; i < DATA_WIDTH/8; i++)
+                        s_rdata[i*8 +: 8] <= mem.exists(bus_aligned_rd_addr + i) ? mem[bus_aligned_rd_addr + i] : 8'h00;
+                    $display("[TB] R: addr=0x%h data=0x%h", first_addr, {mem[bus_aligned_rd_addr+3], mem[bus_aligned_rd_addr+2], mem[bus_aligned_rd_addr+1], mem[bus_aligned_rd_addr]});
+                end
             end else if (s_rvalid && sys_if.master_if[0].rready) begin
                 if (s_rlast) begin
                     s_rvalid <= 0;
@@ -233,10 +242,14 @@ module axi4_tb_top;
                     end
                     rd_addr <= next_addr;
 
-                    // Read next beat from memory (return 0 if not written)
-                    for (int i = 0; i < DATA_WIDTH/8; i++)
-                        s_rdata[i*8 +: 8] <= mem.exists(next_addr + i) ? mem[next_addr + i] : 8'h00;
-                    $display("[TB] R: addr=0x%h data=0x%h", next_addr, {mem[next_addr+3], mem[next_addr+2], mem[next_addr+1], mem[next_addr]});
+                    // Read next beat from memory using bus-aligned base (handles narrow transfers)
+                    begin
+                        logic [ADDR_WIDTH-1:0] bus_aligned_next_addr;
+                        bus_aligned_next_addr = next_addr & ~(ADDR_WIDTH'(DATA_WIDTH/8 - 1));
+                        for (int i = 0; i < DATA_WIDTH/8; i++)
+                            s_rdata[i*8 +: 8] <= mem.exists(bus_aligned_next_addr + i) ? mem[bus_aligned_next_addr + i] : 8'h00;
+                        $display("[TB] R: addr=0x%h data=0x%h", next_addr, {mem[bus_aligned_next_addr+3], mem[bus_aligned_next_addr+2], mem[bus_aligned_next_addr+1], mem[bus_aligned_next_addr]});
+                    end
                 end
             end
         end

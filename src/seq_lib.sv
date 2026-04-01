@@ -924,3 +924,132 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_unaligned_addr_seq
+
+//-----------------------------------------------------------------------------
+// axi4_narrow_seq
+//
+// Test steps:
+//   1. Set AXI transfer parameters: len inside [0:255],
+//      size inside {0,1,2} (byte/half-word/word), burst=INCR
+//   2. Set random start address (aligned/unaligned random) and transaction count (5000)
+//   3. Master VIP sends 50 write transactions
+//   4. After ALL write transactions complete, read back and compare
+//-----------------------------------------------------------------------------
+class axi4_narrow_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_narrow_seq)
+
+    rand bit [31:0] m_start_addr;
+    int unsigned m_num_txns = 50;
+
+    function new(string name = "axi4_narrow_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        typedef logic [31:0] word_arr_t[];
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] strb_arr_t[];
+
+        axi4_transaction wr_txn, rd_txn;
+        logic [31:0] wr_addr_q[$];
+        logic [7:0] wr_len_q[$];
+        logic [2:0] wr_size_q[$];
+        word_arr_t wr_data_q[$], tmp_data;
+        strb_arr_t wr_wstrb_q[$], tmp_wstrb;
+        logic [31:0] cur_addr;
+        int bytes_per_txn;
+
+        cur_addr = m_start_addr;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting narrow_seq: start_addr=0x%08h num_txns=%0d",
+                      cur_addr, m_num_txns), UVM_LOW)
+
+        repeat (m_num_txns) begin
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            wr_txn.m_addr.rand_mode(0);
+            start_item(wr_txn);
+
+            if (!wr_txn.randomize() with {
+                m_trans_type == TRANS_WRITE;
+                m_burst == BURST_INCR;
+                m_len inside {[8'd0:8'd255]};
+                m_size inside {3'd0, 3'd1, 3'd2};
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            // Align address for size=1 (2-byte) transfers: bit[0] must be 0
+            if (wr_txn.m_size == 3'd1 && cur_addr[0])
+                cur_addr++;  // Round up to next even address
+
+            wr_txn.m_addr[31:0] = cur_addr;
+            wr_txn.m_addr[63:32] = 32'h0;
+
+            wr_txn.calc_unaligned_wstrb();
+
+            finish_item(wr_txn);
+
+            wr_addr_q.push_back(cur_addr);
+            wr_len_q.push_back(wr_txn.m_len);
+            wr_size_q.push_back(wr_txn.m_size);
+            tmp_data = wr_txn.m_data;
+            wr_data_q.push_back(tmp_data);
+            tmp_wstrb = wr_txn.m_wstrb;
+            wr_wstrb_q.push_back(tmp_wstrb);
+
+            bytes_per_txn = (int'(wr_txn.m_len) + 1) * (1 << int'(wr_txn.m_size));
+            cur_addr += bytes_per_txn;
+        end
+
+        `uvm_info(get_type_name(),
+            $sformatf("All %0d write transactions done", m_num_txns), UVM_LOW)
+
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+
+            if (!rd_txn.randomize() with {
+                m_trans_type == TRANS_READ;
+                m_burst == BURST_INCR;
+                m_len == local::wr_len_q[i];
+                m_size == local::wr_size_q[i];
+                m_addr[31:0] == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            // Compare data beat by beat
+            foreach (wr_data_q[i][j]) begin
+                logic [31:0] exp_data, got_data;
+                logic [`AI_AXI4_MAX_DATA_WIDTH/8-1:0] exp_strb;
+                bit mismatch = 0;
+
+                exp_strb = wr_wstrb_q[i][j];
+                exp_data = wr_data_q[i][j];
+                got_data = rd_txn.m_rdata[j];
+
+                // Compare only valid bytes based on wstrb
+                for (int b = 0; b < (`AI_AXI4_MAX_DATA_WIDTH/8); b++) begin
+                    if (exp_strb[b]) begin
+                        if (exp_data[b*8 +: 8] !== got_data[b*8 +: 8])
+                            mismatch = 1;
+                    end
+                end
+
+                if (mismatch) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%08h beat[%0d]: exp=0x%08h got=0x%08h strb=0x%h",
+                                  wr_addr_q[i], j, exp_data, got_data, exp_strb))
+                end
+            end
+
+            `uvm_info(get_type_name(),
+                $sformatf("Read-back done: addr=0x%08h len=%0d size=%0d",
+                          wr_addr_q[i], wr_len_q[i], wr_size_q[i]), UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_narrow_seq

@@ -23,8 +23,7 @@ VCS_FLAGS  = -full64 -sverilog -timescale=1ns/1ps \
              -LDFLAGS -Wl,--no-as-needed
 
 # Simulation flags
-#TESTNAME  ?= axi4_base_test
-TESTNAME  ?= burst_fixed_test
+TESTNAME  ?= narrow_test
 
 SIM_FLAGS  = +UVM_TESTNAME=$(TESTNAME) \
              +UVM_VERBOSITY=UVM_MEDIUM \

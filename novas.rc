@@ -389,10 +389,10 @@ ActiveFileDialog = 977,579,616,272
 qWaveSignalDialog = 885,475,800,479
 usrMarkerDialog = 885,565,800,300
 saveSigDlg = 738,415,1093,599
-QwWarnMsgDlg = 1065,1066,600,250
-restoreSigDlg = 1009,496,551,438
 loadFile = 647,390,1275,650
-QwUserAskDlg = 625,1234,324,130
+QwWarnMsgDlg = 1075,1114,600,250
+restoreSigDlg = 1009,496,551,438
+QwUserAskDlg = 660,1234,324,130
 [Relationship]
 hideRecursiceNode = FALSE
 [Session Cache]
@@ -471,7 +471,7 @@ KeepBreakPoints = FALSE
 vcs_svPath = ./simv
 uvmAware = TRUE
 smartlog = TRUE
-vcs_svOption = +UVM_TESTNAME=unaligned_addr_test +UVM_VERBOSITY=UVM_MEDIUM +FSDB_FILE=unaligned_addr_test -l unaligned_addr_test.log  -sml=verdi
+vcs_svOption = +UVM_TESTNAME=narrow_test +UVM_VERBOSITY=UVM_MEDIUM +FSDB_FILE=narrow_test -l narrow_test.log  -sml=verdi
 [SimulationPlus2]
 dumpPowerRoot = FALSE
 eventDumpUnfinish = FALSE
@@ -683,28 +683,28 @@ parRuleSets = "/home/xingchangchang/ProgramFiles/vcs_verdi2018/synopsys/verdi_20
 s/PredefinedParRules/par_rule_UVM.rc /home/xingchangchang/ProgramFiles/vcs_verdi2018/synopsys/verdi_201809/verdi/Verdi_O-2018.09-SP2/share/VIA/Apps/PredefinedParRules/par_rule_LP.rc /home/xingchangchang/ProgramFiles/vcs_verdi2018/synopsys/verdi_201809/verd\
 i/Verdi_O-2018.09-SP2/share/VIA/Apps/PredefinedParRules/par_rule_VCS.rc "
 [VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column0]
-name = Message
-width = 2000
-visualIndex = 4
-isHidden = FALSE
-isUserChangeColumnVisible = FALSE
-[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column1]
-name = Code
-width = 60
-visualIndex = 2
-isHidden = FALSE
-isUserChangeColumnVisible = FALSE
-[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column2]
 name = Time
 width = 60
 visualIndex = 0
 isHidden = FALSE
 isUserChangeColumnVisible = FALSE
-[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column3]
+[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column1]
 name = Type
 width = 60
 visualIndex = 3
 isHidden = TRUE
+isUserChangeColumnVisible = FALSE
+[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column2]
+name = Message
+width = 2000
+visualIndex = 4
+isHidden = FALSE
+isUserChangeColumnVisible = FALSE
+[VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column3]
+name = Code
+width = 60
+visualIndex = 2
+isHidden = FALSE
 isUserChangeColumnVisible = FALSE
 [VIA.interactiveDebug.preference.vgifColumnSettingRC.setting0.column4]
 name = Severity
@@ -725,28 +725,28 @@ visualIndex = 1
 isHidden = TRUE
 isUserChangeColumnVisible = FALSE
 [VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column1]
+name = Time
+width = 60
+visualIndex = 0
+isHidden = TRUE
+isUserChangeColumnVisible = FALSE
+[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column2]
 name = Code
 width = 60
 visualIndex = 2
 isHidden = TRUE
 isUserChangeColumnVisible = FALSE
-[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column2]
+[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column3]
 name = Type
 width = 60
 visualIndex = 3
 isHidden = TRUE
 isUserChangeColumnVisible = FALSE
-[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column3]
+[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column4]
 name = Message
 width = 2000
 visualIndex = 4
 isHidden = FALSE
-isUserChangeColumnVisible = FALSE
-[VIA.oneSearch.preference.vgifColumnSettingRC.setting0.column4]
-name = Time
-width = 60
-visualIndex = 0
-isHidden = TRUE
 isUserChangeColumnVisible = FALSE
 [VIA.parRule]
 parRulePathInterForm = ""
@@ -1041,9 +1041,10 @@ hspiceIncOpenMode = TRUE
 pcSelectMode = TRUE
 hierarchyDelimiter = /
 RecentFile1 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/signal.rc\""
-RecentFile2 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/inter.fsdb\""
-RecentFile3 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/axi4_fixed_len0_size7_test.fsdb\""
-RecentFile4 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/sim.fsdb\""
+RecentFile2 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/narrow_test.fsdb\""
+RecentFile3 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/inter.fsdb\""
+RecentFile4 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/axi4_fixed_len0_size7_test.fsdb\""
+RecentFile5 = "\"/home/xingchangchang/ai_evaluation/claude_code/axi4_vip/ai_cc_opus_axi4_vip/sim.fsdb\""
 open_file_time_range = FALSE
 value_window_aligment = Right
 signal_window_alignment = Auto
