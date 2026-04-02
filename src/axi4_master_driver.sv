@@ -114,7 +114,10 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
     task drive_single_write(axi4_transaction txn);
         if (m_cfg.m_support_data_before_addr) begin
             fork
-                drive_w_channel(txn);
+                begin
+                    drive_w_channel(txn);
+                    drive_b_channel(txn);
+                end
                 begin
                     // Delay AW by up to data_before_addr_osd beats
                     repeat (m_cfg.m_data_before_addr_osd) @(m_vif.master_cb);
@@ -124,10 +127,12 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
         end else begin
             fork
                 drive_aw_channel(txn);
-                drive_w_channel(txn);
+                begin
+                    drive_w_channel(txn);
+                    drive_b_channel(txn);
+                end
             join
         end
-        drive_b_channel(txn);
     endtask
 
     task drive_aw_channel(axi4_transaction txn);
@@ -159,10 +164,12 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
             m_vif.master_cb.wvalid <= 1;
             @(m_vif.master_cb);
             while (!m_vif.master_cb.wready) @(m_vif.master_cb);
+            if (i == num_beats - 1) begin
+                m_vif.master_cb.wvalid <= 0;
+                m_vif.master_cb.wlast  <= 0;
+            end
         end
         txn.m_wlast_time = m_cycle;
-        m_vif.master_cb.wvalid <= 0;
-        m_vif.master_cb.wlast  <= 0;
     endtask
 
     task drive_b_channel(axi4_transaction txn);

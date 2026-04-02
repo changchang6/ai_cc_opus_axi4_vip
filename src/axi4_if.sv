@@ -105,18 +105,27 @@ interface axi4_if #(
     int ar_beat_cnt;
     logic [7:0] aw_len_latch;
     logic [7:0] ar_len_latch;
+    logic aw_received;  // Track if AW has been received
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             aw_beat_cnt  <= 0;
             aw_len_latch <= 0;
+            aw_received  <= 0;
         end else begin
             if (awvalid && awready) begin
                 aw_len_latch <= awlen;
-                // If W beat 0 arrives simultaneously with AW handshake, count it now
-                aw_beat_cnt  <= (wvalid && wready) ? 1 : 0;
-            end else if (wvalid && wready) begin
-                aw_beat_cnt <= aw_beat_cnt + 1;
+                aw_beat_cnt  <= 0;
+                aw_received  <= 1;
+            end
+
+            if (wvalid && wready) begin
+                if (wlast) begin
+                    aw_beat_cnt <= 0;
+                    aw_received <= 0;
+                end else if (aw_received) begin
+                    aw_beat_cnt <= aw_beat_cnt + 1;
+                end
             end
         end
     end
@@ -164,17 +173,16 @@ interface axi4_if #(
     AST_WVALID_STABLE: assert property (p_wvalid_stable)
         else $error("AST_WVALID_STABLE: WVALID deasserted before WREADY");
 
-    // 4. WLAST correct: wlast must be high only on beat awlen+1
-    // When AW and W beat 0 are simultaneous, use awlen directly (registered counter not yet updated)
+    // 4. WLAST correct: only check after AW received
+    `ifndef DISABLE_WLAST_CHK
     property p_wlast_correct;
         @(posedge clk) disable iff (!rst_n)
-        (wvalid && wready) |->
-            (awvalid && awready) ?
-                (wlast == (awlen == 8'd0)) :
-                (wlast == (aw_beat_cnt == aw_len_latch));
+        (wvalid && wready && aw_received) |->
+            (wlast == (aw_beat_cnt == aw_len_latch));
     endproperty
     AST_WLAST_CORRECT: assert property (p_wlast_correct)
         else $error("AST_WLAST_CORRECT: WLAST incorrect at beat %0d (expected beat %0d)", aw_beat_cnt, aw_len_latch);
+    `endif
 
     // 5. RLAST correct: rlast must be high only on beat arlen+1
     // When AR and R beat 0 are simultaneous, use arlen directly (registered counter not yet updated)

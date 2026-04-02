@@ -96,6 +96,10 @@ class axi4_env_cfg extends uvm_object;
     int unsigned max_read_outstanding [`AXI4_ENV_CFG_MAX_MASTERS];
     int unsigned max_write_outstanding[`AXI4_ENV_CFG_MAX_MASTERS];
 
+    // Data-before-address per master
+    bit          master_data_before_addr    [`AXI4_ENV_CFG_MAX_MASTERS];
+    int unsigned master_data_before_addr_osd[`AXI4_ENV_CFG_MAX_MASTERS];
+
     //-------------------------------------------------------------------------
     // Virtual interface array – set one entry per master before calling
     // set_axi_system_cfg().  The array must be sized to at least num_masters.
@@ -155,6 +159,9 @@ class axi4_env_cfg extends uvm_object;
             // Map system watchdog timeouts to per-master timeouts
             m_master_cfg[i].m_wtimeout = u_axi_system_cfg.awready_watchdog_timeout;
             m_master_cfg[i].m_rtimeout = u_axi_system_cfg.arready_watchdog_timeout;
+
+            m_master_cfg[i].m_support_data_before_addr = master_data_before_addr[i];
+            m_master_cfg[i].m_data_before_addr_osd     = master_data_before_addr_osd[i];
 
             // Masters are always UVM_ACTIVE (slaves honour slave_is_active)
             m_master_cfg[i].m_is_active = UVM_ACTIVE;

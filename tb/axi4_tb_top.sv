@@ -71,8 +71,9 @@ module axi4_tb_top;
     // AW channel: always ready
     assign sys_if.master_if[0].awready = 1'b1;
 
-    // W channel: always ready
-    assign sys_if.master_if[0].wready = 1'b1;
+    // W channel: ready signal
+    logic s_wready;
+    assign sys_if.master_if[0].wready = s_wready;
 
     // B channel
     logic                s_bvalid;
@@ -88,10 +89,14 @@ module axi4_tb_top;
             s_bvalid     <= 0;
             s_bid        <= '0;
             s_bresp      <= 2'b00;
+            s_wready     <= 0;
             aw_queue     = {};
             current_aw   = '{default: '0};
             aw_active    = 0;
         end else begin
+            // Update wready based on AW availability
+            s_wready <= (aw_active || aw_queue.size() > 0);
+
             // Capture AW channel and push to queue
             if (sys_if.master_if[0].awvalid && sys_if.master_if[0].awready) begin
                 aw_info_t aw_info;
@@ -111,45 +116,50 @@ module axi4_tb_top;
                 logic [ADDR_WIDTH-1:0] wr_addr;
 
                 // Get new transaction from queue if no active transaction
-                if (!aw_active && aw_queue.size() > 0) begin
-                    current_aw = aw_queue.pop_front();
-                    aw_active = 1;
-                end
-
-                // Calculate address for current beat
-                if (current_aw.beat_cnt == 0) begin
-                    wr_addr = current_aw.addr;
-                end else if (current_aw.burst == 2'b01) begin  // INCR
-                    wr_addr = current_aw.aligned_start + current_aw.beat_cnt * (1 << current_aw.size);
-                end else if (current_aw.burst == 2'b10) begin  // WRAP
-                    logic [ADDR_WIDTH-1:0] wrap_boundary;
-                    int wrap_size;
-                    wrap_size = (current_aw.len + 1) * (1 << current_aw.size);
-                    wrap_boundary = (current_aw.addr / wrap_size) * wrap_size;
-                    wr_addr = wrap_boundary + ((current_aw.addr - wrap_boundary + current_aw.beat_cnt * (1 << current_aw.size)) % wrap_size);
-                end else begin  // FIXED
-                    wr_addr = current_aw.addr;
-                end
-
-                $display("[TB] W: addr=0x%h data=0x%h wstrb=0x%h last=%0d", wr_addr, sys_if.master_if[0].wdata, sys_if.master_if[0].wstrb, sys_if.master_if[0].wlast);
-
-                // Write to memory: only write bytes indicated by size
-                begin
-                    int bytes_per_beat;
-                    bytes_per_beat = 1 << current_aw.size;
-                    for (int i = 0; i < bytes_per_beat; i++) begin
-                        if (sys_if.master_if[0].wstrb[i])
-                            mem[wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
+                if (!aw_active) begin
+                    if (aw_queue.size() > 0) begin
+                        current_aw = aw_queue.pop_front();
+                        aw_active = 1;
                     end
                 end
 
-                if (sys_if.master_if[0].wlast) begin
-                    s_bvalid  <= 1;
-                    s_bid     <= current_aw.id;
-                    s_bresp   <= 2'b00;
-                    aw_active = 0;
-                end else begin
-                    current_aw.beat_cnt = current_aw.beat_cnt + 1;
+                // Only process W data if we have an active AW
+                if (aw_active) begin
+                    // Calculate address for current beat
+                    if (current_aw.beat_cnt == 0) begin
+                        wr_addr = current_aw.addr;
+                    end else if (current_aw.burst == 2'b01) begin  // INCR
+                        wr_addr = current_aw.aligned_start + current_aw.beat_cnt * (1 << current_aw.size);
+                    end else if (current_aw.burst == 2'b10) begin  // WRAP
+                        logic [ADDR_WIDTH-1:0] wrap_boundary;
+                        int wrap_size;
+                        wrap_size = (current_aw.len + 1) * (1 << current_aw.size);
+                        wrap_boundary = (current_aw.addr / wrap_size) * wrap_size;
+                        wr_addr = wrap_boundary + ((current_aw.addr - wrap_boundary + current_aw.beat_cnt * (1 << current_aw.size)) % wrap_size);
+                    end else begin  // FIXED
+                        wr_addr = current_aw.addr;
+                    end
+
+                    $display("[TB] W: addr=0x%h data=0x%h wstrb=0x%h last=%0d", wr_addr, sys_if.master_if[0].wdata, sys_if.master_if[0].wstrb, sys_if.master_if[0].wlast);
+
+                    // Write to memory: only write bytes indicated by size
+                    begin
+                        int bytes_per_beat;
+                        bytes_per_beat = 1 << current_aw.size;
+                        for (int i = 0; i < bytes_per_beat; i++) begin
+                            if (sys_if.master_if[0].wstrb[i])
+                                mem[wr_addr + i] = sys_if.master_if[0].wdata[i*8 +: 8];
+                        end
+                    end
+
+                    if (sys_if.master_if[0].wlast) begin
+                        s_bvalid  <= 1;
+                        s_bid     <= current_aw.id;
+                        s_bresp   <= 2'b00;
+                        aw_active = 0;
+                    end else begin
+                        current_aw.beat_cnt = current_aw.beat_cnt + 1;
+                    end
                 end
             end
 
