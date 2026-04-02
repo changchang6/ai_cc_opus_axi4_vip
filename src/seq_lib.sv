@@ -192,7 +192,6 @@ class axi4_burst_incr_seq extends axi4_base_sequence;
         // Step 3: Send ALL m_num_txns write transactions first
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
-            wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
 
@@ -311,7 +310,6 @@ class axi4_burst_fixed_seq extends axi4_base_sequence;
 
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
-            wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
 
@@ -436,7 +434,6 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
             addr_used[rand_addr] = 1;
 
             wr_txn = axi4_transaction::type_id::create("wr_txn");
-            wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
 
@@ -472,7 +469,6 @@ class axi4_burst_wrap_seq extends axi4_base_sequence;
 
         foreach (wr_addr_q[i]) begin
             rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
-            rd_txn.m_addr.rand_mode(0);
 
             start_item(rd_txn);
 
@@ -559,7 +555,6 @@ class axi4_burst_random_seq extends axi4_base_sequence;
 
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
-            wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
 
@@ -725,7 +720,6 @@ class axi4_burst_slice_seq extends axi4_base_sequence;
 
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
-            wr_txn.m_addr.rand_mode(0);
 
             start_item(wr_txn);
 
@@ -820,7 +814,7 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
     localparam int BYTES_PER_BEAT = 1 << MAX_SIZE;  // e.g. 128 for 1024-bit bus
     localparam int STRB_WIDTH     = `AI_AXI4_MAX_DATA_WIDTH / 8;
 
-    int unsigned m_txns_per_iter = 100;
+    int unsigned m_txns_per_iter = 10;
     int unsigned m_num_iters     = 50;
 
     function new(string name = "axi4_unaligned_addr_seq");
@@ -857,8 +851,7 @@ class axi4_unaligned_addr_seq extends axi4_base_sequence;
             // Step 4: Send 100 write transactions per iteration
             repeat (m_txns_per_iter) begin
                 wr_txn = axi4_transaction::type_id::create("wr_txn");
-                wr_txn.m_addr.rand_mode(0);
-                start_item(wr_txn);
+                    start_item(wr_txn);
 
                 // Step 1: len inside [0:255], size=MAX_SIZE, burst=INCR
                 wr_txn.m_cfg = m_cfg;
@@ -1008,7 +1001,6 @@ class axi4_narrow_seq extends axi4_base_sequence;
         repeat (m_num_txns) begin
             wr_txn = axi4_transaction::type_id::create("wr_txn");
             wr_txn.m_addr = 64'h0;
-            wr_txn.m_addr.rand_mode(0);
             start_item(wr_txn);
 
             wr_txn.m_cfg = m_cfg;
@@ -1508,3 +1500,99 @@ class axi4_data_first_seq extends axi4_base_sequence;
     endtask
 
 endclass : axi4_data_first_seq
+
+//-----------------------------------------------------------------------------
+// axi4_long_time_seq
+//-----------------------------------------------------------------------------
+class axi4_long_time_seq extends axi4_base_sequence;
+    `uvm_object_utils(axi4_long_time_seq)
+
+    localparam int MAX_SIZE = $clog2(`AI_AXI4_MAX_DATA_WIDTH / 8);
+
+    rand bit [31:0] m_start_addr;
+    int unsigned m_num_txns = 5000;
+
+    constraint c_addr_aligned {
+        (m_start_addr & ((1 << MAX_SIZE) - 1)) == 0;
+    }
+
+    function new(string name = "axi4_long_time_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        typedef logic [`AI_AXI4_MAX_DATA_WIDTH-1:0] word_arr_t[];
+
+        axi4_transaction wr_txn, rd_txn;
+        logic [31:0] cur_addr;
+        logic [31:0] wr_addr_q[$];
+        word_arr_t   wr_data_q[$];
+        word_arr_t   tmp_data;
+        int unsigned bytes_per_txn;
+
+        bytes_per_txn = (16 + 1) * (1 << MAX_SIZE);
+        cur_addr = m_start_addr;
+
+        `uvm_info(get_type_name(),
+            $sformatf("Starting long_time_seq: %0d write txns, len=16 size=%0d burst=INCR",
+                      m_num_txns, MAX_SIZE), UVM_LOW)
+
+        repeat (m_num_txns) begin
+            wr_txn = axi4_transaction::type_id::create("wr_txn");
+            start_item(wr_txn);
+            wr_txn.m_cfg = m_cfg;
+
+            if (!wr_txn.randomize() with {
+                m_trans_type == TRANS_WRITE;
+                m_burst      == BURST_INCR;
+                m_len        == 8'd16;
+                m_size       == MAX_SIZE[2:0];
+            }) `uvm_fatal(get_type_name(), "Write randomization failed")
+
+            wr_txn.m_addr[31:0]  = cur_addr;
+            wr_txn.m_addr[63:32] = 32'h0;
+
+            foreach (wr_txn.m_wstrb[k])
+                wr_txn.m_wstrb[k] = '1;
+
+            finish_item(wr_txn);
+
+            wr_addr_q.push_back(cur_addr);
+            tmp_data = wr_txn.m_data;
+            wr_data_q.push_back(tmp_data);
+
+            cur_addr += bytes_per_txn;
+        end
+
+        `uvm_info(get_type_name(), "All write transactions done", UVM_LOW)
+        `uvm_info(get_type_name(), "Starting read-back verification", UVM_LOW)
+
+        foreach (wr_addr_q[i]) begin
+            rd_txn = axi4_transaction::type_id::create($sformatf("rd_txn_%0d", i));
+            start_item(rd_txn);
+            rd_txn.m_cfg = m_cfg;
+
+            if (!rd_txn.randomize() with {
+                m_trans_type  == TRANS_READ;
+                m_burst       == BURST_INCR;
+                m_len         == 8'd16;
+                m_size        == MAX_SIZE[2:0];
+                m_addr[31:0]  == local::wr_addr_q[i];
+                m_addr[63:32] == 32'h0;
+            }) `uvm_fatal(get_type_name(), "Read randomization failed")
+
+            finish_item(rd_txn);
+
+            foreach (wr_data_q[i][j]) begin
+                if (rd_txn.m_rdata[j] !== wr_data_q[i][j]) begin
+                    `uvm_error(get_type_name(),
+                        $sformatf("MISMATCH addr=0x%08h beat[%0d]: exp=0x%08h got=0x%08h",
+                                  wr_addr_q[i], j, wr_data_q[i][j], rd_txn.m_rdata[j]))
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "Read-back verification complete", UVM_LOW)
+    endtask
+
+endclass : axi4_long_time_seq

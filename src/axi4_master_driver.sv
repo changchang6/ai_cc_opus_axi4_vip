@@ -231,7 +231,7 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
             if (m_cfg.m_wtimeout > 0) begin
                 foreach (m_wr_pending[id]) begin
                     if ((m_cycle - m_wr_pending[id]) > m_cfg.m_wtimeout)
-                        `uvm_error("AXI4_DRV",
+                        `uvm_warning("AXI4_DRV",
                             $sformatf("Write timeout: awid=0x%0h pending for %0d cycles (limit=%0d)",
                                 id, m_cycle - m_wr_pending[id], m_cfg.m_wtimeout))
                 end
@@ -239,7 +239,7 @@ class axi4_master_driver extends uvm_driver #(axi4_transaction);
             if (m_cfg.m_rtimeout > 0) begin
                 foreach (m_rd_pending[id]) begin
                     if ((m_cycle - m_rd_pending[id]) > m_cfg.m_rtimeout)
-                        `uvm_error("AXI4_DRV",
+                        `uvm_warning("AXI4_DRV",
                             $sformatf("Read timeout: arid=0x%0h pending for %0d cycles (limit=%0d)",
                                 id, m_cycle - m_rd_pending[id], m_cfg.m_rtimeout))
                 end

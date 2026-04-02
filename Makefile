@@ -66,7 +66,7 @@ sim: compile
 # Run axi4_fixed_len0_size7_test with AI_AXI4_MAX_DATA_WIDTH=1024
 sim_size7:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    +define+AI_AXI4_MAX_DATA_WIDTH=1024 \
+	    -l compile_$(SIZE7_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024 \
 	    -l compile_$(SIZE7_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(SIZE7_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(SIZE7_TEST) \
@@ -83,7 +83,7 @@ sim_burst_incr:
 # Run burst_fixed_test
 sim_burst_fixed:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_FIXED_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	    -l compile_$(BURST_FIXED_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_FIXED_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_FIXED_TEST) \
 	    -l $(BURST_FIXED_TEST).log $(GUI_FLAGS)
@@ -91,7 +91,7 @@ sim_burst_fixed:
 # Run burst_wrap_test with default AI_AXI4_MAX_DATA_WIDTH=32
 sim_burst_wrap:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_WRAP_TEST).log  +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	    -l compile_$(BURST_WRAP_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_WRAP_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_WRAP_TEST) \
 	    -l $(BURST_WRAP_TEST).log $(GUI_FLAGS)
@@ -99,7 +99,7 @@ sim_burst_wrap:
 # Run burst_random_test
 sim_burst_random:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_RANDOM_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	    -l compile_$(BURST_RANDOM_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_RANDOM_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_RANDOM_TEST) \
 	    -l $(BURST_RANDOM_TEST).log $(GUI_FLAGS)
@@ -107,7 +107,7 @@ sim_burst_random:
 # Run burst_slice_test
 sim_burst_slice:
 	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
-	    -l compile_$(BURST_SLICE_TEST).log +define+AI_AXI4_MAX_DATA_WIDTH=1024
+	    -l compile_$(BURST_SLICE_TEST).log
 	./$(SIMV) +UVM_TESTNAME=$(BURST_SLICE_TEST) +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=$(BURST_SLICE_TEST) \
 	    -l $(BURST_SLICE_TEST).log $(GUI_FLAGS)
@@ -126,6 +126,13 @@ sim_para_cfg1:
 	./$(SIMV) +UVM_TESTNAME=para_cfg1_test +UVM_VERBOSITY=UVM_MEDIUM \
 	    +FSDB_FILE=sim_para_cfg1 \
 	    -l para_cfg1_test.log $(GUI_FLAGS)
+
+sim_long_time:
+	$(VCS) $(VCS_FLAGS) $(WAVE_FLAGS) $(UVM_ARGS) $(SRC_FILES) -top $(TOP) -o $(SIMV) \
+	    -l compile_long_time_test.log
+	./$(SIMV) +UVM_TESTNAME=long_time_test +UVM_VERBOSITY=UVM_MEDIUM \
+	    +FSDB_FILE=long_time_test \
+	    -l long_time_test.log $(GUI_FLAGS)
 
 wave:
 	verdi -sv +incdir+src $(SRC_FILES) -ssf $(TESTNAME).fsdb &

@@ -36,6 +36,10 @@ class axi4_monitor extends uvm_monitor;
     // Cycle counter
     longint unsigned m_cycle;
 
+    // Timeout ID tracking
+    logic [7:0] m_wr_timeout_ids[$];
+    logic [7:0] m_rd_timeout_ids[$];
+
     function new(string name = "axi4_monitor", uvm_component parent = null);
         super.new(name, parent);
         m_total_valid_bytes = 0;
@@ -164,9 +168,11 @@ class axi4_monitor extends uvm_monitor;
                         automatic longint unsigned tstart = m_cycle;
                         begin
                             repeat (m_cfg.m_wtimeout) @(m_vif.monitor_cb);
-                            if (m_wr_inflight.exists(tid))
+                            if (m_wr_inflight.exists(tid)) begin
+                                m_wr_timeout_ids.push_back(tid);
                                 `uvm_warning("AXI4_MON",
                                     $sformatf("Write timeout warning: awid=0x%0h at cycle %0d", tid, tstart))
+                            end
                         end
                     join_none
             end
@@ -246,9 +252,11 @@ class axi4_monitor extends uvm_monitor;
                         automatic longint unsigned tstart = m_cycle;
                         begin
                             repeat (m_cfg.m_rtimeout) @(m_vif.monitor_cb);
-                            if (m_rd_inflight.exists(tid))
+                            if (m_rd_inflight.exists(tid)) begin
+                                m_rd_timeout_ids.push_back(tid);
                                 `uvm_warning("AXI4_MON",
                                     $sformatf("Read timeout warning: arid=0x%0h at cycle %0d", tid, tstart))
+                            end
                         end
                     join_none
             end

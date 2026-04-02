@@ -11,6 +11,8 @@ interface axi4_if #(
     input logic clk,
     input logic rst_n
 );
+    import uvm_pkg::*;
+    `include "uvm_macros.svh"
 
     // Write Address Channel
     logic [ADDR_WIDTH-1:0]  awaddr;
@@ -155,7 +157,7 @@ interface axi4_if #(
         (awvalid && !awready) |=> awvalid;
     endproperty
     AST_AWVALID_STABLE: assert property (p_awvalid_stable)
-        else $error("AST_AWVALID_STABLE: AWVALID deasserted before AWREADY");
+        else `uvm_error("AST_AWVALID_STABLE", "AWVALID deasserted before AWREADY")
 
     // 2. ARVALID stable: once asserted, must hold until ARREADY
     property p_arvalid_stable;
@@ -163,7 +165,7 @@ interface axi4_if #(
         (arvalid && !arready) |=> arvalid;
     endproperty
     AST_ARVALID_STABLE: assert property (p_arvalid_stable)
-        else $error("AST_ARVALID_STABLE: ARVALID deasserted before ARREADY");
+        else `uvm_error("AST_ARVALID_STABLE", "ARVALID deasserted before ARREADY")
 
     // 3. WVALID stable: once asserted, must hold until WREADY
     property p_wvalid_stable;
@@ -171,7 +173,7 @@ interface axi4_if #(
         (wvalid && !wready) |=> wvalid;
     endproperty
     AST_WVALID_STABLE: assert property (p_wvalid_stable)
-        else $error("AST_WVALID_STABLE: WVALID deasserted before WREADY");
+        else `uvm_error("AST_WVALID_STABLE", "WVALID deasserted before WREADY")
 
     // 4. WLAST correct: only check after AW received
     `ifndef DISABLE_WLAST_CHK
@@ -181,7 +183,7 @@ interface axi4_if #(
             (wlast == (aw_beat_cnt == aw_len_latch));
     endproperty
     AST_WLAST_CORRECT: assert property (p_wlast_correct)
-        else $error("AST_WLAST_CORRECT: WLAST incorrect at beat %0d (expected beat %0d)", aw_beat_cnt, aw_len_latch);
+        else `uvm_error("AST_WLAST_CORRECT", $sformatf("WLAST incorrect at beat %0d (expected beat %0d)", aw_beat_cnt, aw_len_latch))
     `endif
 
     // 5. RLAST correct: rlast must be high only on beat arlen+1
@@ -194,7 +196,7 @@ interface axi4_if #(
                 (rlast == (ar_beat_cnt == ar_len_latch));
     endproperty
     AST_RLAST_CORRECT: assert property (p_rlast_correct)
-        else $error("AST_RLAST_CORRECT: RLAST incorrect at beat %0d (expected beat %0d)", ar_beat_cnt, ar_len_latch);
+        else `uvm_error("AST_RLAST_CORRECT", $sformatf("RLAST incorrect at beat %0d (expected beat %0d)", ar_beat_cnt, ar_len_latch))
 
     // 6. AXLEN range: FIXED<=15, WRAP in {1,3,7,15}, INCR<=255
     property p_axlen_range_aw;
@@ -212,9 +214,9 @@ interface axi4_if #(
              1'b1);
     endproperty
     AST_AXLEN_RANGE_AW: assert property (p_axlen_range_aw)
-        else $error("AST_AXLEN_RANGE: AWLEN=%0d invalid for AWBURST=%0b", awlen, awburst);
+        else `uvm_error("AST_AXLEN_RANGE_AW", $sformatf("AWLEN=%0d invalid for AWBURST=%0b", awlen, awburst))
     AST_AXLEN_RANGE_AR: assert property (p_axlen_range_ar)
-        else $error("AST_AXLEN_RANGE: ARLEN=%0d invalid for ARBURST=%0b", arlen, arburst);
+        else `uvm_error("AST_AXLEN_RANGE_AR", $sformatf("ARLEN=%0d invalid for ARBURST=%0b", arlen, arburst))
 
     // VIP transaction len limit: len must not exceed 32
     property p_vip_len_limit_aw;
@@ -226,9 +228,9 @@ interface axi4_if #(
         arvalid |-> (arlen <= 8'd32);
     endproperty
     AST_VIP_LEN_LIMIT_AW: assert property (p_vip_len_limit_aw)
-        else $error("AST_VIP_LEN_LIMIT: AWLEN=%0d exceeds maximum of 32", awlen);
+        else `uvm_error("AST_VIP_LEN_LIMIT_AW", $sformatf("AWLEN=%0d exceeds maximum of 32", awlen))
     AST_VIP_LEN_LIMIT_AR: assert property (p_vip_len_limit_ar)
-        else $error("AST_VIP_LEN_LIMIT: ARLEN=%0d exceeds maximum of 32", arlen);
+        else `uvm_error("AST_VIP_LEN_LIMIT_AR", $sformatf("ARLEN=%0d exceeds maximum of 32", arlen))
 
     // 7. AXBURST encoding: must not be 2'b11
     property p_axburst_encode;
@@ -240,9 +242,9 @@ interface axi4_if #(
         arvalid |-> (arburst != 2'b11);
     endproperty
     AST_AXBURST_ENCODE_AW: assert property (p_axburst_encode)
-        else $error("AST_AXBURST_ENCODE: AWBURST=2'b11 is reserved");
+        else `uvm_error("AST_AXBURST_ENCODE_AW", "AWBURST=2'b11 is reserved")
     AST_AXBURST_ENCODE_AR: assert property (p_arburst_encode)
-        else $error("AST_AXBURST_ENCODE: ARBURST=2'b11 is reserved");
+        else `uvm_error("AST_AXBURST_ENCODE_AR", "ARBURST=2'b11 is reserved")
 
     // 8. AXSIZE range: (1<<axsize) <= DATA_WIDTH/8
     property p_axsize_range_aw;
@@ -254,9 +256,9 @@ interface axi4_if #(
         arvalid |-> ((1 << arsize) <= DATA_WIDTH/8);
     endproperty
     AST_AXSIZE_RANGE_AW: assert property (p_axsize_range_aw)
-        else $error("AST_AXSIZE_RANGE: AWSIZE=%0d exceeds DATA_WIDTH/8=%0d", awsize, DATA_WIDTH/8);
+        else `uvm_error("AST_AXSIZE_RANGE_AW", $sformatf("AWSIZE=%0d exceeds DATA_WIDTH/8=%0d", awsize, DATA_WIDTH/8))
     AST_AXSIZE_RANGE_AR: assert property (p_axsize_range_ar)
-        else $error("AST_AXSIZE_RANGE: ARSIZE=%0d exceeds DATA_WIDTH/8=%0d", arsize, DATA_WIDTH/8);
+        else `uvm_error("AST_AXSIZE_RANGE_AR", $sformatf("ARSIZE=%0d exceeds DATA_WIDTH/8=%0d", arsize, DATA_WIDTH/8))
 
     // 9. WDATA stable: wdata/wstrb/wlast stable while wvalid && !wready
     property p_wdata_stable;
@@ -264,7 +266,7 @@ interface axi4_if #(
         (wvalid && !wready) |=> $stable(wdata) && $stable(wstrb) && $stable(wlast);
     endproperty
     AST_WDATA_STABLE: assert property (p_wdata_stable)
-        else $error("AST_WDATA_STABLE: WDATA/WSTRB/WLAST changed while WVALID held without WREADY");
+        else `uvm_error("AST_WDATA_STABLE", "WDATA/WSTRB/WLAST changed while WVALID held without WREADY")
 
     // 10. AR channel stable: all AR signals stable while arvalid && !arready
     property p_archan_stable;
@@ -273,7 +275,7 @@ interface axi4_if #(
                                    $stable(arsize) && $stable(arburst);
     endproperty
     AST_ARCHAN_STABLE: assert property (p_archan_stable)
-        else $error("AST_ARCHAN_STABLE: AR channel signals changed while ARVALID held without ARREADY");
+        else `uvm_error("AST_ARCHAN_STABLE", "AR channel signals changed while ARVALID held without ARREADY")
 
     // 11. WSTRB width: guaranteed by parameter (DATA_WIDTH/8 == $bits(wstrb))
 
@@ -284,16 +286,16 @@ interface axi4_if #(
                      !$isunknown(awlen)  && !$isunknown(awsize) && !$isunknown(awburst));
     endproperty
     AST_NO_X_AW: assert property (p_no_x_aw)
-        else $error("AST_NO_X_AW: X/Z detected on AW channel while AWVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
-                    awaddr, awid, awlen, awsize, awburst);
+        else `uvm_error("AST_NO_X_AW", $sformatf("X/Z detected on AW channel while AWVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
+                    awaddr, awid, awlen, awsize, awburst))
 
     property p_no_x_w;
         @(posedge clk) disable iff (!rst_n)
         wvalid |-> (!$isunknown(wdata) && !$isunknown(wstrb) && !$isunknown(wlast));
     endproperty
     AST_NO_X_W: assert property (p_no_x_w)
-        else $error("AST_NO_X_W: X/Z detected on W channel while WVALID (data=%0h strb=%0h last=%0h)",
-                    wdata, wstrb, wlast);
+        else `uvm_error("AST_NO_X_W", $sformatf("X/Z detected on W channel while WVALID (data=%0h strb=%0h last=%0h)",
+                    wdata, wstrb, wlast))
 
     property p_no_x_ar;
         @(posedge clk) disable iff (!rst_n)
@@ -301,16 +303,16 @@ interface axi4_if #(
                      !$isunknown(arlen)  && !$isunknown(arsize) && !$isunknown(arburst));
     endproperty
     AST_NO_X_AR: assert property (p_no_x_ar)
-        else $error("AST_NO_X_AR: X/Z detected on AR channel while ARVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
-                    araddr, arid, arlen, arsize, arburst);
+        else `uvm_error("AST_NO_X_AR", $sformatf("X/Z detected on AR channel while ARVALID (addr=%0h id=%0h len=%0h size=%0h burst=%0h)",
+                    araddr, arid, arlen, arsize, arburst))
 
     property p_no_x_b;
         @(posedge clk) disable iff (!rst_n)
         bvalid |-> (!$isunknown(bid) && !$isunknown(bresp));
     endproperty
     AST_NO_X_B: assert property (p_no_x_b)
-        else $error("AST_NO_X_B: X/Z detected on B channel while BVALID (bid=%0h bresp=%0h)",
-                    bid, bresp);
+        else `uvm_error("AST_NO_X_B", $sformatf("X/Z detected on B channel while BVALID (bid=%0h bresp=%0h)",
+                    bid, bresp))
 
     property p_no_x_r;
         @(posedge clk) disable iff (!rst_n)
@@ -318,8 +320,8 @@ interface axi4_if #(
                     !$isunknown(rresp) && !$isunknown(rlast));
     endproperty
     AST_NO_X_R: assert property (p_no_x_r)
-        else $error("AST_NO_X_R: X/Z detected on R channel while RVALID (rid=%0h rdata=%0h rresp=%0h rlast=%0h)",
-                    rid, rdata, rresp, rlast);
+        else `uvm_error("AST_NO_X_R", $sformatf("X/Z detected on R channel while RVALID (rid=%0h rdata=%0h rresp=%0h rlast=%0h)",
+                    rid, rdata, rresp, rlast))
 
     // 12. Unaligned first beat WSTRB: low bytes must be zero for unaligned address
     // Track first beat after AW handshake
@@ -373,7 +375,7 @@ interface axi4_if #(
             ((wstrb & aw_unalign_lo_mask) == '0);
     endproperty
     AST_UNALIGNED_FIRST_BEAT_WSTRB: assert property (p_unaligned_first_beat_wstrb)
-        else $error("AST_UNALIGNED_FIRST_BEAT_WSTRB: First beat WSTRB has non-zero low bytes for unaligned address");
+        else `uvm_error("AST_UNALIGNED_FIRST_BEAT_WSTRB", "First beat WSTRB has non-zero low bytes for unaligned address")
 
     // 13. 2KB boundary check: burst must not cross 2KB boundary
     //     Exception: single-beat (len=0) unaligned burst may cross 2KB
@@ -386,8 +388,8 @@ interface axi4_if #(
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty
     AST_NO_2KB_CROSS_AW: assert property (p_no_2kb_cross_aw)
-        else $error("AST_NO_2KB_CROSS_AW: Write burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
-                    awaddr, awlen, awsize);
+        else `uvm_error("AST_NO_2KB_CROSS_AW", $sformatf("Write burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
+                    awaddr, awlen, awsize))
 
     property p_no_2kb_cross_ar;
         logic [ADDR_WIDTH-1:0] start_addr, end_addr;
@@ -397,8 +399,8 @@ interface axi4_if #(
             (start_addr[ADDR_WIDTH-1:11] == end_addr[ADDR_WIDTH-1:11]);
     endproperty
     AST_NO_2KB_CROSS_AR: assert property (p_no_2kb_cross_ar)
-        else $error("AST_NO_2KB_CROSS_AR: Read burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
-                    araddr, arlen, arsize);
+        else `uvm_error("AST_NO_2KB_CROSS_AR", $sformatf("Read burst crosses 2KB boundary (addr=0x%0h, len=%0d, size=%0d)",
+                    araddr, arlen, arsize))
 
     // 14. Narrow transfer WSTRB check for size=1 (2-byte) first beat
     property p_narrow_size1_wstrb;
@@ -412,7 +414,7 @@ interface axi4_if #(
             (wstrb == expected_wstrb);
     endproperty
     AST_NARROW_SIZE1_WSTRB: assert property (p_narrow_size1_wstrb)
-        else $error("AST_NARROW_SIZE1_WSTRB: size=1 first beat WSTRB=0x%h, expected=0x%h at addr=0x%h",
-                    wstrb, (DATA_WIDTH/8)'((1 << ((int'(eff_aw_addr) % (DATA_WIDTH/8) + 2 <= DATA_WIDTH/8) ? 2 : (DATA_WIDTH/8 - int'(eff_aw_addr) % (DATA_WIDTH/8)))) - 1) << (int'(eff_aw_addr) % (DATA_WIDTH/8)), eff_aw_addr);
+        else `uvm_error("AST_NARROW_SIZE1_WSTRB", $sformatf("size=1 first beat WSTRB=0x%h, expected=0x%h at addr=0x%h",
+                    wstrb, (DATA_WIDTH/8)'((1 << ((int'(eff_aw_addr) % (DATA_WIDTH/8) + 2 <= DATA_WIDTH/8) ? 2 : (DATA_WIDTH/8 - int'(eff_aw_addr) % (DATA_WIDTH/8)))) - 1) << (int'(eff_aw_addr) % (DATA_WIDTH/8)), eff_aw_addr))
 
 endinterface : axi4_if
